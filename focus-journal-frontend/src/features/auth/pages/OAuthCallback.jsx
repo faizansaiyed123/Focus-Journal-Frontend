@@ -26,7 +26,7 @@ export default function OAuthCallback() {
       }
 
       try {
-        const resp = await fetch("http://localhost:8000/auth/me", {
+        const resp = await fetch("https://focus-journal-backend.onrender.com/auth/me", {
           headers: {
             Authorization: `Bearer ${token}`,
           },

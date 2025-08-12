@@ -175,19 +175,19 @@ export default function Register() {
           {/* Social Buttons */}
           <div className="space-y-3">
             <a
-              href="http://localhost:8000/auth/github/login"
+              href="https://focus-journal-backend.onrender.com/auth/github/login"
               className="flex items-center justify-center bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition font-semibold text-sm shadow"
             >
               <FaGithub className="mr-2 text-xl" /> Continue with GitHub
             </a>
             <a
-              href="http://localhost:8000/auth/google/login"
+              href="http://ocus-journal-backend.onrender.com/auth/google/login"
               className="flex items-center justify-center border border-gray-300 bg-white text-gray-900 py-3 rounded-lg hover:border-gray-400 transition font-semibold text-sm shadow"
             >
               <FcGoogle className="mr-2 text-xl" /> Continue with Google
             </a>
             <a
-              href="http://localhost:8000/auth/linkedin/login"
+              href="http://ocus-journal-backend.onrender.com/auth/linkedin/login"
               className="flex items-center justify-center bg-blue-700 text-white py-3 rounded-lg hover:bg-blue-600 transition font-semibold text-sm shadow"
             >
               <FaLinkedinIn className="mr-2 text-xl" /> Continue with LinkedIn
