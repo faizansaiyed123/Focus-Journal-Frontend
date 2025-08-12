@@ -134,8 +134,7 @@ export default function Login() {
             </a>
 
             <a
-              href="href="https://focus-journal-backend.onrender.com/auth/google/login"
-
+              href="https://focus-journal-backend.onrender.com/auth/google/login"
               className="group relative w-full flex items-center justify-center border border-gray-300 hover:border-gray-400 bg-white text-gray-900 py-3 rounded-lg shadow-sm transition-shadow duration-300"
             >
               <FcGoogle className="mr-3 text-2xl transition-transform group-hover:scale-110" />
@@ -143,7 +142,7 @@ export default function Login() {
             </a>
 
             <a
-              href="https://focus-journal-backend.onrender.com/auth/linkedin/login"
+              href="http://localhost:8000/auth/linkedin/login"
               className="group relative w-full flex items-center justify-center bg-blue-700 hover:bg-blue-600 text-white py-3 rounded-lg shadow-md transition-shadow duration-300"
             >
               <FaLinkedinIn className="mr-3 text-2xl transition-transform group-hover:scale-110" />
