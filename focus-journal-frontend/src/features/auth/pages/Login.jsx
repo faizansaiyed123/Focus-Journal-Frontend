@@ -142,7 +142,7 @@ export default function Login() {
             </a>
 
             <a
-              href="http://localhost:8000/auth/linkedin/login"
+              href="https://focus-journal-backend.onrender.com/auth/linkedin/login"
               className="group relative w-full flex items-center justify-center bg-blue-700 hover:bg-blue-600 text-white py-3 rounded-lg shadow-md transition-shadow duration-300"
             >
               <FaLinkedinIn className="mr-3 text-2xl transition-transform group-hover:scale-110" />
