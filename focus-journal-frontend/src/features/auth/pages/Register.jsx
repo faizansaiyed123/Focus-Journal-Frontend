@@ -38,7 +38,7 @@ export default function Register() {
       login({ user: loginData.user, token: loginData.token });
 
       // Redirect to dashboard after login
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError('Registration or login failed. Please try again.');
     }
