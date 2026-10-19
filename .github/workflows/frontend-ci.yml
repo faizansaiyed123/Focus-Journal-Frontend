@@ -14,42 +14,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  update-dependencies:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    defaults:
-      run:
-        working-directory: focus-journal-frontend
-    steps:
-      - name: Check out the pull request branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Regenerate lockfile and apply compatible security fixes
-        run: |
-          npm install --package-lock-only --ignore-scripts
-          npm audit fix
-      - name: Commit patched lockfile
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- package.json package-lock.json; then
-            echo "No dependency updates required."
-            exit 0
-          fi
-          git add package.json package-lock.json
-          git commit -m "Update patched npm dependency versions"
-          git push origin "HEAD:${{ github.head_ref }}"
-
   build:
     runs-on: ubuntu-latest
     defaults:
@@ -66,10 +33,8 @@ jobs:
           cache-dependency-path: focus-journal-frontend/package-lock.json
       - name: Install dependencies
         run: npm ci
-      - name: Inspect dependency advisories
-        run: |
-          npm audit --json > /tmp/npm-audit.json || true
-          node --input-type=module -e "import fs from 'node:fs'; const audit = JSON.parse(fs.readFileSync('/tmp/npm-audit.json', 'utf8')); console.log('Audit summary:', JSON.stringify(audit.metadata?.vulnerabilities || {})); for (const [name, item] of Object.entries(audit.vulnerabilities || {})) console.log([name, 'severity=' + item.severity, 'direct=' + item.isDirect, 'range=' + item.range, 'fix=' + JSON.stringify(item.fixAvailable)].join(' | '));"
+      - name: Audit dependency tree
+        run: npm audit --audit-level=high
       - name: Lint source files
         run: npm run lint -- --max-warnings=0
       - name: Build production bundle
