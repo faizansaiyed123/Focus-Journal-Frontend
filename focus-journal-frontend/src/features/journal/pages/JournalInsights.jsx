@@ -31,7 +31,7 @@ export default function JournalInsights() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => { if (token) load(); }, [token, load]);
 

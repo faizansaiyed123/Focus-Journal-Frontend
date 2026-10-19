@@ -171,11 +171,13 @@ export default function Dashboard() {
     refreshDashboard();
   }, [token, navigate, refreshDashboard]);
 
+  const focusSessionStatus = focusSession?.status;
+
   useEffect(() => {
-    if (!focusSession || focusSession.status !== 'running') return undefined;
+    if (focusSessionStatus !== 'running') return undefined;
     const interval = window.setInterval(() => setClock(Date.now()), 1000);
     return () => window.clearInterval(interval);
-  }, [focusSession && focusSession.status]);
+  }, [focusSessionStatus]);
 
   const userTimezone = profile?.timezone || 'UTC';
   const todayKey = localDateKey(new Date(), userTimezone);
