@@ -1,17 +1,2 @@
-// src/services/api.js
-import axios from 'axios';
-
-const api = axios.create({
- baseURL: 'https://focus-journal-backend.onrender.com'
- // Change to actual backend base URL
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-export default api;
+// Keep every feature on the same configured API client.
+export { default } from '../api/apiClient';

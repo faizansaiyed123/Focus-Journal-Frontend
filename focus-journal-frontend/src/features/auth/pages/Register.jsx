@@ -1,199 +1,100 @@
 import { useState } from 'react';
-import { registerAPI, loginAPI } from '../authAPI';
-import { useNavigate } from 'react-router-dom';
-import  useAuthStore from '../authStore';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Check, Eye, EyeOff, Leaf, LockKeyhole } from 'lucide-react';
+import { FaGithub, FaLinkedinIn } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
-import { FaGithub, FaLinkedinIn, FaEye, FaEyeSlash } from 'react-icons/fa';
-import logo from '../../../assets/logo.png';
+import { API_BASE_URL } from '../../../api/apiClient';
+import { fetchCurrentUser, loginAPI, registerAPI } from '../authAPI';
+import useAuthStore from '../authStore';
+
+function getMessage(error, fallback) {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map((item) => item.msg).filter(Boolean).join(' ');
+  return fallback;
+}
 
 export default function Register() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [cpassword, setCpassword] = useState('');
-  const [name, setName] = useState('');
-  const [error, setError] = useState(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showCPassword, setShowCPassword] = useState(false);
-
-  const navigate = useNavigate();
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const login = useAuthStore((state) => state.login);
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-
-    if (password !== cpassword) {
-      setError('Passwords do not match');
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    if (password !== confirmPassword) {
+      setError('Your passwords do not match yet.');
       return;
     }
-
+    setLoading(true);
     try {
-      // Register user
-      await registerAPI({ email, password, confirm_password: cpassword, name });
-
-      // Login user immediately after registration
-      const loginData = await loginAPI({ email, password });
-
-      // Update Zustand auth store with user and token from login response
-      login({ user: loginData.user, token: loginData.token });
-
-      // Redirect to dashboard after login
-      navigate('/dashboard');
-    } catch (err) {
-      setError('Registration or login failed. Please try again.');
+      await registerAPI({
+        full_name: name.trim() || undefined,
+        email: email.trim(),
+        password,
+        confirm_password: confirmPassword,
+      });
+      const response = await loginAPI({ email: email.trim(), password });
+      const token = response.access_token || response.token;
+      if (!token) throw new Error('Your account was created, but sign-in did not complete. Please log in.');
+      window.localStorage.setItem('token', token);
+      let user = null;
+      try {
+        user = await fetchCurrentUser();
+      } catch {
+        // The dashboard can safely retry this request.
+      }
+      login({ user, token });
+      navigate('/dashboard', { replace: true });
+    } catch (requestError) {
+      setError(getMessage(requestError, 'We could not create your account. Please check the details and try again.'));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white px-4 py-12">
-      <div className="w-full max-w-5xl bg-white/80 backdrop-blur-md shadow-2xl rounded-3xl flex flex-col md:flex-row overflow-hidden">
+    <div className="auth-page">
+      <div className="auth-card auth-card-register">
+        <aside className="auth-art">
+          <Link to="/" className="brand-lockup auth-brand"><span className="brand-mark"><Leaf size={20} /></span><span className="brand-name">focus<span>journal</span></span></Link>
+          <div className="auth-art-copy"><span className="auth-art-eyebrow"><span /> YOUR SPACE STARTS HERE</span><h1>A softer way<br />to <em>move forward.</em></h1><p>A few minutes of focus and reflection can change the way a day feels.</p></div>
+          <div className="auth-art-bottom"><span className="auth-art-stamp"><Leaf size={22} /></span><span><strong>One day at a time.</strong><small>That is more than enough.</small></span></div>
+          <div className="auth-art-blob auth-blob-one" /><div className="auth-art-blob auth-blob-two" />
+        </aside>
 
-        {/* Left Side (Logo) */}
-        <div className="hidden md:flex w-1/2 items-center justify-center bg-[#f9fafb] p-12">
-          <div className="w-full flex flex-col items-center justify-center max-w-[450px]">
-            <img
-              src={logo}
-              alt="Focus Journal Logo"
-              className="w-full h-auto object-contain transition-transform duration-500 hover:scale-105"
-            />
-            <p className="mt-6 text-center text-sm text-gray-600 tracking-wide">
-              Plan. Reflect. Improve.
-            </p>
+        <section className="auth-form-wrap auth-register-wrap">
+          <Link to="/" className="auth-mobile-brand"><span className="brand-mark"><Leaf size={18} /></span><span className="brand-name">focus<span>journal</span></span></Link>
+          <div className="auth-form-heading"><span className="section-eyebrow">A FRESH BEGINNING</span><h2>Create your space.</h2><p>Make it yours from day one.</p></div>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {error && <div className="form-error" role="alert">{error}</div>}
+            <label className="field-label" htmlFor="register-name">Your name <span className="field-optional">optional</span></label>
+            <input className="text-field" id="register-name" type="text" autoComplete="name" maxLength={255} value={name} onChange={(event) => setName(event.target.value)} placeholder="What should we call you?" />
+            <label className="field-label" htmlFor="register-email">Email address</label>
+            <input className="text-field" id="register-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required />
+            <label className="field-label" htmlFor="register-password">Create password</label>
+            <div className="password-field-wrap"><input className="text-field" id="register-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={72} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" required /><button type="button" className="password-visibility" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>
+            <label className="field-label" htmlFor="register-confirm">Confirm password</label>
+            <div className="password-field-wrap"><input className="text-field" id="register-confirm" type={showConfirmPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} maxLength={72} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Enter it once more" required /><button type="button" className="password-visibility" onClick={() => setShowConfirmPassword(!showConfirmPassword)} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>{showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>
+            <p className="password-hint"><LockKeyhole size={13} /> Use uppercase, lowercase, a number, and a special character.</p>
+            <button className="button button-primary auth-submit" type="submit" disabled={loading}>{loading ? 'Creating your space…' : 'Create my account'} {!loading && <ArrowRight size={17} />}</button>
+          </form>
+          <div className="auth-divider"><span /> <small>or sign up with</small> <span /></div>
+          <div className="auth-social-row">
+            <a className="social-signin" href={API_BASE_URL + '/auth/google/login'} aria-label="Sign up with Google"><FcGoogle size={19} /> <span>Google</span></a>
+            <a className="social-signin" href={API_BASE_URL + '/auth/github/login'} aria-label="Sign up with GitHub"><FaGithub size={18} /> <span>GitHub</span></a>
+            <a className="social-signin" href={API_BASE_URL + '/auth/linkedin/login'} aria-label="Sign up with LinkedIn"><FaLinkedinIn size={18} /> <span>LinkedIn</span></a>
           </div>
-        </div>
-
-        {/* Right Side (Form) */}
-        <form
-          onSubmit={handleSubmit}
-          className="w-full md:w-1/2 p-8 sm:p-12 space-y-6"
-        >
-          <h2 className="text-3xl font-extrabold text-gray-900 text-center">
-            Create your account
-          </h2>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name
-            </label>
-            <input
-              type="text"
-              placeholder="John Doe"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-sm"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email address
-            </label>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-sm"
-              required
-            />
-          </div>
-
-          {/* Password field with show/hide */}
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-sm pr-10"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 focus:outline-none"
-              tabIndex={-1}
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
-          </div>
-
-          {/* Confirm Password field with show/hide */}
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Confirm Password
-            </label>
-            <input
-              type={showCPassword ? 'text' : 'password'}
-              placeholder="••••••••"
-              value={cpassword}
-              onChange={(e) => setCpassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-sm pr-10"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowCPassword(!showCPassword)}
-              className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 focus:outline-none"
-              tabIndex={-1}
-            >
-              {showCPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
-          </div>
-
-          {error && (
-            <div className="text-red-600 text-sm text-center mt-4">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition text-sm shadow-md"
-          >
-            Register
-          </button>
-
-          <p className="text-sm text-center text-gray-600">
-            Already have an account?{' '}
-            <a href="/login" className="text-blue-600 hover:underline font-medium">
-              Login here
-            </a>
-          </p>
-
-          {/* Divider */}
-          <div className="flex items-center justify-center my-4">
-            <span className="border-t border-gray-300 w-full"></span>
-            <span className="px-3 text-gray-400 text-sm">or</span>
-            <span className="border-t border-gray-300 w-full"></span>
-          </div>
-
-          {/* Social Buttons */}
-          <div className="space-y-3">
-            <a
-              href="https://focus-journal-backend.onrender.com/auth/github/login"
-              className="flex items-center justify-center bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition font-semibold text-sm shadow"
-            >
-              <FaGithub className="mr-2 text-xl" /> Continue with GitHub
-            </a>
-            <a
-              href="http://ocus-journal-backend.onrender.com/auth/google/login"
-              className="flex items-center justify-center border border-gray-300 bg-white text-gray-900 py-3 rounded-lg hover:border-gray-400 transition font-semibold text-sm shadow"
-            >
-              <FcGoogle className="mr-2 text-xl" /> Continue with Google
-            </a>
-            <a
-              href="http://ocus-journal-backend.onrender.com/auth/linkedin/login"
-              className="flex items-center justify-center bg-blue-700 text-white py-3 rounded-lg hover:bg-blue-600 transition font-semibold text-sm shadow"
-            >
-              <FaLinkedinIn className="mr-2 text-xl" /> Continue with LinkedIn
-            </a>
-          </div>
-        </form>
+          <p className="auth-switch-copy">Already have a space? <Link to="/login">Sign in <ArrowRight size={14} /></Link></p>
+          <p className="auth-private-note"><Check size={13} /> Your account belongs to you.</p>
+        </section>
       </div>
     </div>
   );

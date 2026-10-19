@@ -1,155 +1,90 @@
 import { useState } from 'react';
-import { loginAPI } from '../authAPI';
-import useAuthStore from '../authStore';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, ArrowUpRight, Check, Leaf, LockKeyhole } from 'lucide-react';
 import { FaGithub, FaLinkedinIn } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
-import logo from '../../../assets/logo.png';
+import { API_BASE_URL } from '../../../api/apiClient';
+import { loginAPI, fetchCurrentUser } from '../authAPI';
+import useAuthStore from '../authStore';
+
+function getMessage(error, fallback) {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map((item) => item.msg).filter(Boolean).join(' ');
+  return fallback;
+}
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const login = useAuthStore((s) => s.login);
+  const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
-  setLoading(true);
-  try {
-    console.log('Submitting login with:', { email, password });
-    const data = await loginAPI({ email, password });
-    console.log('Login API response:', data);
-
-    // Use 'access_token' instead of 'token'
-    if (!data.access_token) {
-      throw new Error('Token not found in response');
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const response = await loginAPI({ email: email.trim(), password });
+      const token = response.access_token || response.token;
+      if (!token) throw new Error('The server did not return an access token.');
+      window.localStorage.setItem('token', token);
+      let user = null;
+      try {
+        user = await fetchCurrentUser();
+      } catch {
+        // The authenticated dashboard retries the profile request if needed.
+      }
+      login({ user, token });
+      navigate('/dashboard', { replace: true });
+    } catch (requestError) {
+      setError(getMessage(requestError, 'We could not sign you in. Check your details and try again.'));
+    } finally {
+      setLoading(false);
     }
-
-    localStorage.setItem('token', data.access_token);
-    login({ user: data.user || null, token: data.access_token }); // user may be missing, so fallback to null
-
-    setLoading(false);
-    navigate('/dashboard');  // Redirect after successful login
-  } catch (err) {
-    console.error('Login failed:', err.response?.data || err.message);
-    setError('Invalid email or password. Please try again.');
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="w-full max-w-4xl bg-white shadow-xl rounded-2xl flex flex-col md:flex-row overflow-hidden">
-        {/* Left Side */}
-        <div className="hidden md:flex w-1/2 items-center justify-center p-10">
-          <img
-            src={logo}
-            alt="Focus Journal Logo"
-            className="max-w-full max-h-full object-contain"
-          />
-        </div>
-
-        {/* Right Side (Form) */}
-        <form
-          onSubmit={handleSubmit}
-          className={`w-full md:w-1/2 p-8 sm:p-10 space-y-6 transition-opacity duration-300 ${
-            loading ? 'opacity-50 pointer-events-none' : 'opacity-100'
-          }`}
-        >
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center">
-            Sign in to your account
-          </h2>
-
-          {error && (
-            <p className="text-red-600 text-sm text-center font-medium">{error}</p>
-          )}
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-sm"
-              required
-              disabled={loading}
-            />
+    <div className="auth-page">
+      <div className="auth-card">
+        <aside className="auth-art">
+          <Link to="/" className="brand-lockup auth-brand">
+            <span className="brand-mark"><Leaf size={20} /></span>
+            <span className="brand-name">focus<span>journal</span></span>
+          </Link>
+          <div className="auth-art-copy">
+            <span className="auth-art-eyebrow"><span /> A SPACE TO COME BACK TO YOURSELF</span>
+            <h1>Find your<br /><em>own rhythm.</em></h1>
+            <p>Notice the little things. Make space for the important ones. Start where you are.</p>
           </div>
+          <div className="auth-art-bottom"><span className="auth-art-stamp"><Leaf size={22} /></span><span><strong>Less pressure.</strong><small>More presence.</small></span></div>
+          <div className="auth-art-blob auth-blob-one" /><div className="auth-art-blob auth-blob-two" />
+        </aside>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-sm"
-              required
-              disabled={loading}
-              autoComplete="username"
-            />
+        <section className="auth-form-wrap">
+          <Link to="/" className="auth-mobile-brand"><span className="brand-mark"><Leaf size={18} /></span><span className="brand-name">focus<span>journal</span></span></Link>
+          <div className="auth-form-heading"><span className="section-eyebrow">WELCOME BACK</span><h2>Good to see you.</h2><p>Sign in and pick up where you left off.</p></div>
+
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {error && <div className="form-error" role="alert">{error}</div>}
+            <label className="field-label" htmlFor="login-email">Email address</label>
+            <input className="text-field" id="login-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required />
+            <div className="field-label-row"><label className="field-label" htmlFor="login-password">Password</label><LockKeyhole size={14} /></div>
+            <input className="text-field" id="login-password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required />
+            <button className="button button-primary auth-submit" type="submit" disabled={loading}>{loading ? 'Signing you in…' : 'Sign in to your space'} {!loading && <ArrowRight size={17} />}</button>
+          </form>
+
+          <div className="auth-divider"><span /> <small>or continue with</small> <span /></div>
+          <div className="auth-social-row">
+            <a className="social-signin" href={API_BASE_URL + '/auth/google/login'} aria-label="Continue with Google"><FcGoogle size={19} /> <span>Google</span><ArrowUpRight size={13} /></a>
+            <a className="social-signin" href={API_BASE_URL + '/auth/github/login'} aria-label="Continue with GitHub"><FaGithub size={18} /> <span>GitHub</span><ArrowUpRight size={13} /></a>
+            <a className="social-signin" href={API_BASE_URL + '/auth/linkedin/login'} aria-label="Continue with LinkedIn"><FaLinkedinIn size={18} /> <span>LinkedIn</span><ArrowUpRight size={13} /></a>
           </div>
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-md transition disabled:bg-blue-400 text-sm"
-            disabled={loading}
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-
-          <p className="text-sm text-center text-gray-500">
-            Don’t have an account?{' '}
-            <a href="/register" className="text-blue-600 hover:underline font-medium">
-              Register here
-            </a>
-          </p>
-
-          {/* Divider */}
-          <div className="flex items-center justify-center my-4">
-            <span className="border-t border-gray-300 w-full"></span>
-            <span className="px-3 text-gray-400 text-sm">or</span>
-            <span className="border-t border-gray-300 w-full"></span>
-          </div>
-
-          {/* Social Auth Buttons */}
-          <div className="space-y-4 mt-6">
-            <a
-              href="https://focus-journal-backend.onrender.com/auth/github/login"
-              className="group relative w-full flex items-center justify-center bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-lg shadow-md transition-shadow duration-300"
-            >
-              <FaGithub className="mr-3 text-2xl transition-transform group-hover:scale-110" />
-              <span className="font-semibold text-base">Continue with GitHub</span>
-            </a>
-
-            <a
-              href="https://focus-journal-backend.onrender.com/auth/google/login"
-              className="group relative w-full flex items-center justify-center border border-gray-300 hover:border-gray-400 bg-white text-gray-900 py-3 rounded-lg shadow-sm transition-shadow duration-300"
-            >
-              <FcGoogle className="mr-3 text-2xl transition-transform group-hover:scale-110" />
-              <span className="font-semibold text-base">Continue with Google</span>
-            </a>
-
-            <a
-              href="https://focus-journal-backend.onrender.com/auth/linkedin/login"
-              className="group relative w-full flex items-center justify-center bg-blue-700 hover:bg-blue-600 text-white py-3 rounded-lg shadow-md transition-shadow duration-300"
-            >
-              <FaLinkedinIn className="mr-3 text-2xl transition-transform group-hover:scale-110" />
-              <span className="font-semibold text-base">Continue with LinkedIn</span>
-            </a>
-          </div>
-        </form>
+          <p className="auth-switch-copy">New to Focus Journal? <Link to="/register">Create an account <ArrowRight size={14} /></Link></p>
+          <p className="auth-private-note"><Check size={13} /> Your journal is personal. Always has been.</p>
+        </section>
       </div>
     </div>
   );

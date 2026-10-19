@@ -1,12 +1,25 @@
-# React + Vite
+# Focus Journal Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A responsive React + Vite experience for Focus Journal: focus sessions, a daily check-in, private journal entries, and reflection based on saved history.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+    cd focus-journal-frontend
+    npm ci
+    cp .env.example .env
+    npm run dev
 
-## Expanding the ESLint configuration
+Set \`VITE_API_URL\` to the root URL of the FastAPI backend. It defaults to the deployed Focus Journal API when the variable is not set.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Build and quality checks
+
+    npm run build
+    npm run lint
+
+The frontend CI workflow runs the production build on pull requests and pushes to \`main\`.
+
+## Backend integration
+
+The frontend uses one shared Axios client and the backend’s canonical routes for authentication, journals, check-ins, focus sessions, profile privacy, and summaries. The daily dashboard is powered by live authenticated API responses; empty history is shown as empty rather than populated with sample statistics.
+
+OAuth retains the backend's current compatibility redirect. The callback removes the access-token query parameter from the visible URL immediately. A one-time authorization-code exchange still requires a coordinated backend change before the full application should be treated as production-ready.

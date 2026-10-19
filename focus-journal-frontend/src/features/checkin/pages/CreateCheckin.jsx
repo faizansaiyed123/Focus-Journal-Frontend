@@ -1,177 +1,89 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ClipboardCheck, Sparkles } from 'lucide-react';
 import { createCheckin } from '../checkinAPI';
-import useAuthStore from '../../auth/authStore';
-import { motion } from 'framer-motion';
+
+const moods = [
+  { value: 'bad', label: 'Not great', emoji: '🌧️', note: 'A tough one' },
+  { value: 'okay', label: 'Okay', emoji: '🌤️', note: 'Taking it as it comes' },
+  { value: 'good', label: 'Good', emoji: '🙂', note: 'Feeling steady' },
+  { value: 'great', label: 'Great', emoji: '✨', note: 'Things feel good' },
+  { value: 'happy', label: 'Happy', emoji: '🌞', note: 'A bright day' },
+];
+
+function todayLocal() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
+}
+
+function errorMessage(error) {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map((item) => item.msg).filter(Boolean).join(' ');
+  return 'Your check-in could not be saved. Please try again.';
+}
 
 export default function CreateCheckin() {
-  const token = useAuthStore((state) => state.token);
   const navigate = useNavigate();
-  const [mood, setMood] = useState('');
+  const [mood, setMood] = useState('good');
   const [note, setNote] = useState('');
-  const [focusPercent, setFocusPercent] = useState(0);
+  const [focusPercent, setFocusPercent] = useState(70);
   const [tags, setTags] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null); // State for capturing errors
+  const [error, setError] = useState('');
 
-  const today = new Date().toISOString().split('T')[0];
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
-    setError(null); // Clear any previous errors
-
-    const checkinData = {
-      date: today,
-      mood: mood.toLowerCase(),
-      focus_percent: focusPercent,
-      tags: tags.split(',').map((tag) => tag.trim().toLowerCase()),
-      note,
-    };
-
+    setError('');
     try {
-      await createCheckin(checkinData, token);
-      navigate('/checkin');
-    } catch (err) {
-      setError('Only one check-in per day is allowed.'); // Show a generic error message to the user
+      await createCheckin({
+        date: todayLocal(),
+        mood,
+        focus_percent: Number(focusPercent),
+        tags: tags.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean),
+        note: note.trim() || null,
+      });
+      navigate('/checkin', { replace: true });
+    } catch (requestError) {
+      setError(errorMessage(requestError));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <motion.div
-      className="max-w-xl mx-auto p-6 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-300 shadow-xl rounded-xl mt-8"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      {/* Back Button */}
-      <motion.button
-        onClick={() => navigate('/checkin')}
-        className="flex items-center text-gray-700 text-sm bg-white border border-gray-300 rounded px-4 py-2 mb-4 hover:bg-gray-100"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <span className="mr-2">🔙</span> Back to Check-Ins
-      </motion.button>
+    <div className="form-page">
+      <Link to="/checkin" className="back-link"><ArrowLeft size={16} /> Back to check-ins</Link>
+      <section className="form-page-heading"><span className="section-eyebrow"><span className="eyebrow-dot" /> A MOMENT FOR YOURSELF</span><h1>How are you, today?</h1><p>There's no score to chase here. Just notice where you are.</p></section>
+      <form className="reflection-form" onSubmit={handleSubmit}>
+        <div className="reflection-form-top"><span className="form-icon-stamp"><ClipboardCheck size={21} /></span><span className="form-date-chip"><CalendarDays size={14} /> {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span></div>
+        <fieldset className="mood-picker">
+          <legend>Choose the mood that feels closest</legend>
+          <div className="mood-option-grid">
+            {moods.map((item) => (
+              <button type="button" key={item.value} className={'mood-option' + (mood === item.value ? ' mood-option-selected' : '')} aria-pressed={mood === item.value} onClick={() => setMood(item.value)}>
+                <span className="mood-option-emoji">{item.emoji}</span><strong>{item.label}</strong><small>{item.note}</small>{mood === item.value && <span className="mood-check"><Check size={12} /></span>}
+              </button>
+            ))}
+          </div>
+        </fieldset>
 
-      <motion.h2
-        className="text-3xl font-bold text-gray-700 mb-6 text-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-      >
-        📝 Create Check-In
-      </motion.h2>
-      
-      <motion.form
-        onSubmit={handleSubmit}
-        className="space-y-6 bg-white p-6 rounded-lg shadow-md"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-        {/* Mood Input */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.4 }}
-        >
-          <label className="block text-sm font-medium text-gray-700">Mood</label>
-          <input
-            type="text"
-            value={mood}
-            onChange={(e) => setMood(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 mt-2 focus:ring-2 focus:ring-blue-400 transition"
-            placeholder="e.g., Happy, Stressed"
-            required
-          />
-        </motion.div>
+        <div className="focus-range-section">
+          <div className="range-heading"><label htmlFor="focus-percent">How focused did you feel?</label><strong>{focusPercent}%</strong></div>
+          <input id="focus-percent" type="range" min="0" max="100" step="5" value={focusPercent} onChange={(event) => setFocusPercent(Number(event.target.value))} style={{ '--range-progress': focusPercent + '%' }} />
+          <div className="range-endpoints"><span>Scattered</span><span>In the zone</span></div>
+        </div>
 
-        {/* Focus Percent Input */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.5 }}
-        >
-          <label className="block text-sm font-medium text-gray-700">Focus Percent</label>
-          <input
-            type="number"
-            value={focusPercent}
-            onChange={(e) => setFocusPercent(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 mt-2 focus:ring-2 focus:ring-blue-400 transition"
-            placeholder="e.g., 80"
-            min="0"
-            max="100"
-            required
-          />
-        </motion.div>
+        <div className="form-field-group"><label htmlFor="checkin-note">A note to yourself <span>optional</span></label><textarea id="checkin-note" value={note} onChange={(event) => setNote(event.target.value)} maxLength={10000} rows={4} placeholder="What’s on your mind? What went well, or what felt hard?" /><div className="field-meta"><span>Write as much or as little as you like.</span><span>{note.length}/10,000</span></div></div>
+        <div className="form-field-group"><label htmlFor="checkin-tags">Tags <span>optional</span></label><input id="checkin-tags" className="text-field" value={tags} onChange={(event) => setTags(event.target.value)} placeholder="work, rest, family — separate with commas" /><p className="field-help">Tags make patterns easier to notice later.</p></div>
 
-        {/* Tags Input */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.6 }}
-        >
-          <label className="block text-sm font-medium text-gray-700">Tags</label>
-          <input
-            type="text"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 mt-2 focus:ring-2 focus:ring-blue-400 transition"
-            placeholder="e.g., #productive, #tired"
-          />
-        </motion.div>
-
-        {/* Note Input */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.7 }}
-        >
-          <label className="block text-sm font-medium text-gray-700">Note</label>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 mt-2 focus:ring-2 focus:ring-blue-400 transition"
-            placeholder="Optional notes..."
-          />
-        </motion.div>
-
-        {/* Error Message Display */}
-        {error && (
-          <motion.p
-            className="text-red-600 text-sm text-center mt-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, delay: 0.9 }}
-          >
-            {error}
-          </motion.p>
-        )}
-
-        {/* Submit Button */}
-        <motion.button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-300 transition"
-          whileHover={{ scale: 1.05 }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.8 }}
-        >
-          {loading ? (
-            <span className="flex justify-center items-center">
-              <div className="w-5 h-5 border-4 border-t-transparent border-blue-600 rounded-full animate-spin mr-3" />
-              Saving...
-            </span>
-          ) : (
-            'Submit Check-In'
-          )}
-        </motion.button>
-      </motion.form>
-    </motion.div>
+        {error && <div className="form-error" role="alert">{error}</div>}
+        <div className="reflection-form-footer"><span><Sparkles size={15} /> Showing up is enough.</span><button className="button button-primary" type="submit" disabled={loading}>{loading ? 'Saving your check-in…' : 'Save today’s check-in'} <ArrowRight size={17} /></button></div>
+      </form>
+    </div>
   );
 }
