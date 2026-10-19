@@ -18,6 +18,7 @@ import Checkins from './features/checkin/pages/Checkins';
 import CreateCheckin from './features/checkin/pages/CreateCheckin';
 import EditCheckin from './features/checkin/pages/EditCheckin';
 import JournalInsights from './features/journal/pages/JournalInsights';
+import Settings from './pages/Settings';
 
 function PrivatePage({ authenticated, children, withLayout = true }) {
   const content = withLayout ? <DashboardLayout>{children}</DashboardLayout> : children;
@@ -44,6 +45,7 @@ export default function App() {
       <Route path="/journal/entry/:id" element={privatePage(<JournalEntryDetail />)} />
       <Route path="/journal/edit/:id" element={privatePage(<EditJournal />)} />
       <Route path="/analytics" element={privatePage(<Analytics />)} />
+      <Route path="/settings" element={privatePage(<Settings />)} />
       <Route path="/checkin" element={privatePage(<Checkins />, false)} />
       <Route path="/checkins/new" element={privatePage(<CreateCheckin />)} />
       <Route path="/checkins/:id" element={privatePage(<CheckinDetail />)} />

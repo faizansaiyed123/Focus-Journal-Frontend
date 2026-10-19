@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -30,11 +30,23 @@ import {
   transitionFocusSession,
 } from '../features/focus/focusSessionAPI';
 
-const localDateKey = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return year + '-' + month + '-' + day;
+const localDateKey = (date, timezone = 'UTC') => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const part = (type) => parts.find((item) => item.type === type)?.value;
+  return part('year') + '-' + part('month') + '-' + part('day');
+};
+
+const shiftDateKey = (key, amount) => {
+  const [year, month, day] = key.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + amount));
+  return date.getUTCFullYear() + '-' +
+    String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
+    String(date.getUTCDate()).padStart(2, '0');
 };
 
 const readableDate = (value) => {
@@ -89,7 +101,6 @@ export default function Dashboard() {
   const [streak, setStreak] = useState(null);
   const [checkinHistory, setCheckinHistory] = useState([]);
   const [focusSummary, setFocusSummary] = useState(null);
-  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState('');
   const [sessionTitle, setSessionTitle] = useState('Focused work');
@@ -136,7 +147,6 @@ export default function Dashboard() {
     setTodayData(today);
     setStreak(streakData);
     setCheckinHistory(Array.isArray(history) ? history : []);
-    setSessions(Array.isArray(sessionPage.items) ? sessionPage.items : []);
     setFocusSummary(summary);
 
     const active = (sessionPage.items || []).find((session) => ['running', 'paused'].includes(session.status));
@@ -167,26 +177,25 @@ export default function Dashboard() {
     return () => window.clearInterval(interval);
   }, [focusSession && focusSession.status]);
 
-  const nowDate = useMemo(() => new Date(), []);
-  const todayKey = localDateKey(new Date());
+  const userTimezone = profile?.timezone || 'UTC';
+  const todayKey = localDateKey(new Date(), userTimezone);
   const fullName = profile && (profile.full_name || profile.name)
     ? (profile.full_name || profile.name).split(' ')[0]
     : (profile && profile.email ? profile.email.split('@')[0] : 'there');
-  const hour = new Date().getHours();
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: userTimezone, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   const todayCheckin = checkinHistory.find((item) => String(item.date || item.checkin_date || '').slice(0, 10) === todayKey);
   const checkedIn = Boolean((todayData && (todayData.checked || (todayData.data && todayData.data.checked_in))) || todayCheckin);
   const recentJournals = [...journals].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3);
   const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - index));
-    const key = localDateKey(date);
+    const key = shiftDateKey(todayKey, index - 6);
     const entry = checkinHistory.find((item) => String(item.date || item.checkin_date || '').slice(0, 10) === key);
+    const stableDate = new Date(key + 'T12:00:00Z');
     return {
       key,
-      label: date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 1),
-      day: date.getDate(),
+      label: stableDate.toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' }).slice(0, 1),
+      day: Number(key.slice(-2)),
       complete: Boolean(entry),
       today: key === todayKey,
     };
@@ -214,22 +223,17 @@ export default function Dashboard() {
         setSessionAnchor(Date.now());
         setClock(Date.now());
         setSessionTitle('');
-        const listed = await listFocusSessions(10, 0);
-        setSessions(Array.isArray(listed.items) ? listed.items : []);
       } else if (focusSession) {
         const updated = await transitionFocusSession(focusSession.id, action);
         if (action === 'complete' || action === 'abandon') {
           setFocusSession(null);
           setSessionAnchor(Date.now());
-          setSessions((previous) => previous.map((session) => session.id === updated.id ? updated : session));
-          const refreshed = await Promise.allSettled([listFocusSessions(10, 0), fetchFocusSessionSummary()]);
-          if (refreshed[0].status === 'fulfilled') setSessions(refreshed[0].value.items || []);
-          if (refreshed[1].status === 'fulfilled') setFocusSummary(refreshed[1].value);
+          const refreshed = await fetchFocusSessionSummary().catch(() => null);
+          if (refreshed) setFocusSummary(refreshed);
         } else {
           setFocusSession(updated);
           setSessionAnchor(Date.now());
           setClock(Date.now());
-          setSessions((previous) => previous.map((session) => session.id === updated.id ? updated : session));
         }
       }
     } catch (error) {
@@ -259,7 +263,7 @@ export default function Dashboard() {
         </div>
         <div className="welcome-date">
           <CalendarCheck size={18} />
-          <span>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+          <span>{new Intl.DateTimeFormat(undefined, { timeZone: userTimezone, weekday: 'long', month: 'short', day: 'numeric' }).format(new Date())}</span>
         </div>
       </section>
 

@@ -23,9 +23,13 @@ function getStoredToken() {
   }
 }
 
+function isPublicAuthRequest(url = '') {
+  return /^\/auth\/(login|register|exchange)(\/|$)/.test(url);
+}
+
 apiClient.interceptors.request.use((config) => {
   const token = getStoredToken();
-  if (token && !config.headers.Authorization) {
+  if (token && !config.headers.Authorization && !isPublicAuthRequest(config.url || '')) {
     config.headers.Authorization = 'Bearer ' + token;
   }
   return config;
@@ -36,11 +40,10 @@ apiClient.interceptors.response.use(
   (error) => {
     const status = error.response && error.response.status;
     const url = error.config && error.config.url ? error.config.url : '';
-    const isCredentialSubmission = /\/auth\/(login|register)(\/|$)/.test(url);
 
     if (
       status === 401 &&
-      !isCredentialSubmission &&
+      !isPublicAuthRequest(url) &&
       typeof window !== 'undefined' &&
       !['/login', '/register', '/auth/callback'].includes(window.location.pathname)
     ) {

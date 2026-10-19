@@ -9,11 +9,13 @@ const routeTitles = [
   ['/journal/create', 'New journal entry'],
   ['/journal/edit', 'Edit journal entry'],
   ['/journal/entry', 'Journal entry'],
+
   ['/journal', 'Your journal'],
   ['/checkins/new', 'Daily check-in'],
   ['/checkins/', 'Check-in details'],
   ['/checkin', 'Your check-ins'],
   ['/analytics', 'Your patterns'],
+  ['/settings', 'Your settings'],
   ['/journal/insights', 'Journal insights'],
   ['/goals', 'Your goals'],
 ];

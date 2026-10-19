@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, ClipboardCheck, Sparkles } from 'lucide-react';
 import { createCheckin } from '../checkinAPI';
+import apiClient from '../../../api/apiClient';
 
 const moods = [
   { value: 'bad', label: 'Not great', emoji: '🌧️', note: 'A tough one' },
@@ -11,12 +12,15 @@ const moods = [
   { value: 'happy', label: 'Happy', emoji: '🌞', note: 'A bright day' },
 ];
 
-function todayLocal() {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return year + '-' + month + '-' + day;
+function dateInTimezone(date, timezone) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const part = (type) => parts.find((item) => item.type === type)?.value;
+  return part('year') + '-' + part('month') + '-' + part('day');
 }
 
 function errorMessage(error) {
@@ -28,6 +32,7 @@ function errorMessage(error) {
 
 export default function CreateCheckin() {
   const navigate = useNavigate();
+  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const [mood, setMood] = useState('good');
   const [note, setNote] = useState('');
   const [focusPercent, setFocusPercent] = useState(70);
@@ -35,13 +40,24 @@ export default function CreateCheckin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    let active = true;
+    apiClient.get('/profile').then((response) => {
+      if (active && response.data?.timezone) setTimezone(response.data.timezone);
+    }).catch(() => null);
+    return () => { active = false; };
+  }, []);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
     setError('');
     try {
+      const profile = await apiClient.get('/profile');
+      const userTimezone = profile.data?.timezone || timezone;
+      setTimezone(userTimezone);
       await createCheckin({
-        date: todayLocal(),
+        date: dateInTimezone(new Date(), userTimezone),
         mood,
         focus_percent: Number(focusPercent),
         tags: tags.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean),
@@ -60,7 +76,7 @@ export default function CreateCheckin() {
       <Link to="/checkin" className="back-link"><ArrowLeft size={16} /> Back to check-ins</Link>
       <section className="form-page-heading"><span className="section-eyebrow"><span className="eyebrow-dot" /> A MOMENT FOR YOURSELF</span><h1>How are you, today?</h1><p>There's no score to chase here. Just notice where you are.</p></section>
       <form className="reflection-form" onSubmit={handleSubmit}>
-        <div className="reflection-form-top"><span className="form-icon-stamp"><ClipboardCheck size={21} /></span><span className="form-date-chip"><CalendarDays size={14} /> {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span></div>
+        <div className="reflection-form-top"><span className="form-icon-stamp"><ClipboardCheck size={21} /></span><span className="form-date-chip"><CalendarDays size={14} /> {new Intl.DateTimeFormat(undefined, { timeZone: timezone, weekday: 'long', month: 'short', day: 'numeric' }).format(new Date())}</span></div>
         <fieldset className="mood-picker">
           <legend>Choose the mood that feels closest</legend>
           <div className="mood-option-grid">
