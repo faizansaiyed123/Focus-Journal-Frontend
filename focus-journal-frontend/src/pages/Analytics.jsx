@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pie, Line } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 import { fetchWeeklySummary, fetchSentimentAnalysis } from '../features/journal/journalAPI';
 import useAuthStore from '../features/auth/authStore';
 import { format } from 'date-fns';
@@ -17,7 +15,6 @@ export default function Analytics() {
   const token = useAuthStore((state) => state.token);
   const [summary, setSummary] = useState(null);
   const [sentiment, setSentiment] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,7 +25,7 @@ export default function Analytics() {
       setLoading(true);
       setError('');
       try {
-        const weeklyData = await fetchWeeklySummary(token, selectedDate);
+        const weeklyData = await fetchWeeklySummary(token);
         const sentimentData = await fetchSentimentAnalysis(token);
         if (!cancelled) {
           setSummary(weeklyData && weeklyData.data ? weeklyData.data : weeklyData);
@@ -42,7 +39,7 @@ export default function Analytics() {
     };
     loadData();
     return () => { cancelled = true; };
-  }, [token, selectedDate]);
+  }, [token]);
 
   const sentimentCounts = useMemo(() => {
     const counts = { positive: 0, neutral: 0, negative: 0 };
@@ -72,7 +69,7 @@ export default function Analytics() {
     <div className="legacy-page-content">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div><span className="section-eyebrow">YOUR PATTERNS, OVER TIME</span><h1 className="text-3xl font-bold text-gray-900 mt-2">A look back.</h1><p className="text-gray-500 mt-2">Use your saved reflections to spot the things that help.</p></div>
-        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl shadow-sm border border-gray-200"><label htmlFor="date-picker" className="text-gray-600 font-medium text-sm whitespace-nowrap">Week of</label><DatePicker id="date-picker" selected={selectedDate} onChange={(date) => { if (date) setSelectedDate(date); }} dateFormat="MMM d, yyyy" maxDate={new Date()} showPopperArrow={false} className="text-gray-900 text-sm focus:outline-none w-28" placeholderText="Choose a date" /></div>
+        <span className="analytics-period-chip">LAST 7 DAYS</span>
       </div>
 
       {error && <div className="inline-notice" role="status">{error}</div>}
@@ -87,11 +84,11 @@ export default function Analytics() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-8">
         <section className="surface-card p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Mood at a glance</h2><p className="text-sm text-gray-500 mb-5">Sentiment in the reflections you’ve saved.</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Mood at a glance</h2><p className="text-sm text-gray-500 mb-5">Sentiment in your saved daily check-in notes.</p>
           <div className="relative h-64">{loading ? <SkeletonBox height="h-full" /> : sentiment.length ? <Pie data={pieChartData} options={pieChartOptions} /> : <p className="text-gray-500 italic pt-8">No sentiment data is available yet.</p>}</div>
         </section>
         <section className="surface-card p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Sentiment over time</h2><p className="text-sm text-gray-500 mb-5">A broad view of how saved entries have felt.</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Sentiment over time</h2><p className="text-sm text-gray-500 mb-5">A historical view of the check-in notes you’ve saved.</p>
           <div className="relative h-64">{loading ? <SkeletonBox height="h-full" /> : sentiment.length ? <Line data={{ labels: sentiment.map((item) => item.date), datasets: [{ label: 'Sentiment score', data: sentiment.map((item) => item.sentiment_score), fill: true, borderColor: '#668d70', backgroundColor: 'rgba(102,141,112,0.12)', tension: 0.35, pointRadius: 3, pointBackgroundColor: '#668d70' }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { y: { min: -1, max: 1 }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }} /> : <p className="text-gray-500 italic pt-8">Add more journal entries to start seeing trends.</p>}</div>
         </section>
       </div>

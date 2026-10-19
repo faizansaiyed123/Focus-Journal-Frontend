@@ -1,46 +1,64 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Leaf } from 'lucide-react';
 import apiClient from '../../../api/apiClient';
 import useAuthStore from '../authStore';
+import { exchangeOAuthCode } from '../authAPI';
 
 export default function OAuthCallback() {
   const login = useAuthStore((state) => state.login);
+  const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
+  const requestPromise = useRef(null);
   const [message, setMessage] = useState('Verifying your sign-in…');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    let cancelled = false;
+    let active = true;
     const params = new URLSearchParams(window.location.search);
-    const callbackToken = params.get('access_token');
+    const code = params.get('code');
+    // Transitional compatibility for a previously deployed backend. New redirects use code only.
+    const legacyToken = params.get('access_token');
     const provider = params.get('provider') || 'your account';
 
-    // Remove the compatibility token from the visible URL and browser history immediately.
-    window.history.replaceState({}, document.title, '/auth/callback');
-    if (callbackToken) window.localStorage.setItem('token', callbackToken);
+    // Remove codes/tokens from the address bar and browser history before making requests.
+    window.history.replaceState({}, document.title, window.location.pathname);
 
-    const token = callbackToken || window.localStorage.getItem('token');
-    if (!token) {
-      navigate('/login', { replace: true });
-      return undefined;
+    if (!requestPromise.current) {
+      requestPromise.current = (async () => {
+        let token;
+        if (code) {
+          const response = await exchangeOAuthCode(code);
+          token = response.access_token;
+        } else if (legacyToken) {
+          token = legacyToken;
+        } else {
+          throw new Error('The sign-in callback did not contain an exchange code.');
+        }
+
+        if (!token) throw new Error('The server did not return an access token.');
+        const response = await apiClient.get('/auth/me', {
+          headers: { Authorization: 'Bearer ' + token },
+        });
+        return { token, user: response.data };
+      })();
     }
 
-    apiClient.get('/auth/me', { headers: { Authorization: 'Bearer ' + token } })
-      .then((response) => {
-        if (cancelled) return;
-        login({ token, user: response.data });
+    requestPromise.current
+      .then(({ token, user }) => {
+        if (!active) return;
+        login({ token, user });
         setMessage('You’re in. Opening your journal…');
         navigate('/dashboard', { replace: true });
       })
       .catch(() => {
-        if (cancelled) return;
-        window.localStorage.removeItem('token');
+        if (!active) return;
+        logout();
         setError('We could not verify this ' + provider + ' sign-in. Please try again.');
       });
 
-    return () => { cancelled = true; };
-  }, [login, navigate]);
+    return () => { active = false; };
+  }, [login, logout, navigate]);
 
   return (
     <main className="oauth-loading-page">

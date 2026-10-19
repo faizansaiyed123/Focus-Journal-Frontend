@@ -22,4 +22,4 @@ The frontend CI workflow runs the production build on pull requests and pushes t
 
 The frontend uses one shared Axios client and the backend’s canonical routes for authentication, journals, check-ins, focus sessions, profile privacy, and summaries. The daily dashboard is powered by live authenticated API responses; empty history is shown as empty rather than populated with sample statistics.
 
-OAuth retains the backend's current compatibility redirect. The callback removes the access-token query parameter from the visible URL immediately. A one-time authorization-code exchange still requires a coordinated backend change before the full application should be treated as production-ready.
+OAuth uses the backend's short-lived, single-use code exchange. The callback strips the code from the visible URL immediately, then exchanges it for an access token over HTTPS. Deploy the frontend and backend changes together.

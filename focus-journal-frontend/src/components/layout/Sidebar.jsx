@@ -1,4 +1,4 @@
-import { BookOpen, ChartNoAxesColumn, ClipboardCheck, Focus, Leaf, Sparkles } from 'lucide-react';
+import { BookOpen, ChartNoAxesColumn, ClipboardCheck, Focus, Leaf, Settings2, Sparkles } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const navItems = [
@@ -6,6 +6,7 @@ const navItems = [
   { name: 'My journal', path: '/journal', icon: BookOpen },
   { name: 'Daily check-ins', path: '/checkin', icon: ClipboardCheck },
   { name: 'My patterns', path: '/analytics', icon: ChartNoAxesColumn },
+  { name: 'Settings', path: '/settings', icon: Settings2 },
 ];
 
 export default function Sidebar({ mobileOpen = false, onNavigate = () => {} }) {
