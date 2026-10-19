@@ -14,9 +14,39 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  update-dependencies:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the pull request branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate lockfile and apply compatible security fixes
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm audit fix
+      - name: Commit patched lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "No dependency updates required."
+            exit 0
+          fi
+          git add package.json package-lock.json
+          git commit -m "Update patched npm dependency versions"
+          git push origin "HEAD:${{ github.head_ref }}"
+
   build:
     runs-on: ubuntu-latest
     defaults:
