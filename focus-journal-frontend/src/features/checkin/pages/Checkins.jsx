@@ -1,202 +1,140 @@
-import { useEffect, useState } from 'react';
-import {
-  fetchCheckins,
-  fetchToday,
-  fetchCheckinStats,
-  fetchStreak,
-} from '../checkinAPI';
-import useAuthStore from '../../auth/authStore';
-import { Link, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, CalendarDays, CheckCircle2, ChevronRight, ClipboardCheck, Flame, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import DashboardLayout from '../../../layouts/DashboardLayout';
-import OptionsMenu from './OptionsMenu';
+import { deleteCheckin, fetchCheckins, fetchCheckinStats, fetchStreak, fetchToday } from '../checkinAPI';
+import useAuthStore from '../../auth/authStore';
 import CheckinBetweenDates from './CheckinBetweenDates';
+
+const localDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
+};
+const displayDate = (value) => {
+  const key = String(value || '').slice(0, 10);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!match) return 'Recently';
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+};
+const moodStyle = {
+  bad: ['🌧️', 'mood-cloud'],
+  okay: ['🌤️', 'mood-sun'],
+  good: ['🙂', 'mood-good'],
+  great: ['✨', 'mood-great'],
+  happy: ['🌞', 'mood-happy'],
+};
+
+function getError(error, fallback) {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map((item) => item.msg).filter(Boolean).join(' ');
+  return fallback;
+}
 
 export default function Checkins() {
   const token = useAuthStore((state) => state.token);
-  const [todayChecked, setTodayChecked] = useState(false);
+  const [today, setToday] = useState(null);
   const [stats, setStats] = useState(null);
   const [streak, setStreak] = useState(null);
   const [checkins, setCheckins] = useState([]);
-  const [openMenuId, setOpenMenuId] = useState(null);
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState('');
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [t, s, st, all] = await Promise.all([
-          fetchToday(token),
-          fetchCheckinStats(token),
-          fetchStreak(token),
-          fetchCheckins(token),
-        ]);
-        setTodayChecked(!!t?.checked);
-        setStats(s || {});
-        setStreak(st || {});
-        setCheckins(all || []);
-      } catch (err) {
-        console.error("Error loading checkins:", err);
-      }
-    };
-    if (token) load();
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    const results = await Promise.allSettled([
+      fetchToday(token),
+      fetchCheckinStats(token),
+      fetchStreak(token),
+      fetchCheckins(token),
+    ]);
+    const value = (index, fallback) => results[index].status === 'fulfilled' ? results[index].value : fallback;
+    setToday(value(0, null));
+    setStats(value(1, null));
+    setStreak(value(2, null));
+    setCheckins(Array.isArray(value(3, [])) ? value(3, []) : []);
+    if (results.every((result) => result.status === 'rejected')) {
+      setError('Your check-ins could not be loaded. Please check your connection and try again.');
+    } else if (results.some((result) => result.status === 'rejected')) {
+      setError('Some check-in statistics could not be refreshed.');
+    }
+    setLoading(false);
   }, [token]);
+
+  useEffect(() => { if (token) load(); }, [token, load]);
+
+  const todayKey = localDateKey(new Date());
+  const todayEntry = checkins.find((item) => String(item.date || item.checkin_date || '').slice(0, 10) === todayKey);
+  const checkedToday = Boolean(today?.checked || today?.data?.checked_in || todayEntry);
+  const ordered = [...checkins].sort((a,b) => String(b.date || b.checkin_date || '').localeCompare(String(a.date || a.checkin_date || '')));
+
+  const removeCheckin = async (id) => {
+    if (!window.confirm('Delete this check-in? This cannot be undone.')) return;
+    setDeletingId(id);
+    setError('');
+    try {
+      await deleteCheckin(id, token);
+      setCheckins((current) => current.filter((item) => item.id !== id));
+      await Promise.allSettled([fetchCheckinStats(token), fetchStreak(token)]).then((results) => {
+        if (results[0].status === 'fulfilled') setStats(results[0].value);
+        if (results[1].status === 'fulfilled') setStreak(results[1].value);
+      });
+    } catch (requestError) {
+      setError(getError(requestError, 'That check-in could not be deleted.'));
+    } finally {
+      setDeletingId('');
+    }
+  };
+
+  const total = stats?.total_checkins ?? checkins.length;
+  const average = Math.round(Number(stats?.average_focus) || 0);
 
   return (
     <DashboardLayout>
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-8">
-        {<CheckinBetweenDates/>}
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
-            📝 Daily Check-Ins
-          </h1>
-          {!todayChecked ? (
-            <button
-              onClick={() => navigate('/checkins/new')}
-              className="bg-blue-600 text-white px-5 py-2 rounded-lg shadow-md hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
-              type="button"
-            >
-              ➕ Create Today’s Check-In
-            </button>
-          ) : (
-            <span className="text-green-700 font-semibold text-sm sm:text-base flex items-center gap-2 select-none">
-              ✅ <span>You’ve already checked in today!</span>
-            </span>
-          )}
-        </div>
-
-        {/* Stats Section */}
-        {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            <StatCard
-              title="Total Check-Ins"
-              value={stats.total_checkins ?? 0}
-              icon="📅"
-              color="from-indigo-500 to-indigo-700"
-            />
-            <StatCard
-              title="Entries Created"
-              value={stats.entry_count ?? 0}
-              icon="📝"
-              color="from-green-500 to-green-700"
-            />
-            <StreakCard streak={streak} />
+      <div className="checkins-page">
+        <header className="secondary-page-header">
+          <div><span className="section-eyebrow"><span className="eyebrow-dot" /> NOTICE HOW YOU’RE DOING</span><h1>Your daily check-ins</h1><p>A little honesty with yourself can go a long way.</p></div>
+          <div className="secondary-header-actions">
+            <button className="secondary-refresh-button" type="button" onClick={load} disabled={loading}><RefreshCw size={15} /> Refresh</button>
+            {checkedToday ? <Link className="button button-quiet" to={todayEntry?.id ? '/checkins/' + todayEntry.id : '/checkin'}><CheckCircle2 size={16} /> Checked in today</Link> : <Link className="button button-primary" to="/checkins/new"><Plus size={17} /> Today's check-in</Link>}
           </div>
-        )}
+        </header>
 
-        {/* Check-In History */}
-        <div>
-          <h2 className="text-2xl font-semibold mb-6 text-gray-800 select-none">
-            📜 Check-In History
-          </h2>
-          <div className="grid gap-6">
-            {checkins.length > 0 ? (
-              checkins.map((ci) => (
-                <div
-                  key={ci.id}
-                  className="relative bg-white border border-gray-300 p-5 rounded-xl shadow hover:shadow-lg transition duration-300 ease-in-out cursor-pointer"
-                >
-                  {/* Menu dots button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOpenMenuId(openMenuId === ci.id ? null : ci.id);
-                    }}
-                    className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    aria-label="Open options menu"
-                    type="button"
-                  >
-                    <b className="text-xl select-none">⋯</b>
-                  </button>
+        {error && <div className="inline-notice" role="status">{error}<button type="button" onClick={load}>Try again</button></div>}
 
-                  {/* Options menu */}
-                  {openMenuId === ci.id && (
-                    <OptionsMenu
-                      onEdit={() => {
-                        navigate(`/checkins/${ci.id}/edit`);
-                        setOpenMenuId(null);
-                      }}
-                      onDelete={() => {
-                        setOpenMenuId(null);
-                      }}
-                    />
-                  )}
+        <section className="checkin-stat-grid" aria-label="Check-in summary">
+          <article className="checkin-stat-card"><span className="checkin-stat-icon checkin-icon-green"><ClipboardCheck size={19} /></span><span><small>TOTAL CHECK-INS</small><strong>{total}</strong><em>Moments you've saved</em></span></article>
+          <article className="checkin-stat-card"><span className="checkin-stat-icon checkin-icon-peach"><Flame size={19} /></span><span><small>CURRENT STREAK</small><strong>{streak?.current_streak ?? 0}<small> days</small></strong><em>One day at a time</em></span></article>
+          <article className="checkin-stat-card"><span className="checkin-stat-icon checkin-icon-lilac"><CheckCircle2 size={19} /></span><span><small>AVERAGE FOCUS</small><strong>{average}%</strong><em>Across your check-ins</em></span></article>
+        </section>
 
-                  {/* Link to details */}
-                  <Link to={`/checkins/${ci.id}`} className="block mt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-gray-900 text-base sm:text-lg">
-                        {ci.date ? new Date(ci.date).toLocaleDateString() : "N/A"}
-                      </span>
-                      <span className="text-sm text-gray-500 italic select-none">
-                        {ci.mood || 'No mood'}
-                      </span>
-                    </div>
-                    <p className="text-gray-700 mt-2 text-sm sm:text-base">
-                      <strong>Focus:</strong> {ci.focus_percent ?? 0}%
-                    </p>
-                    <p className="text-gray-700 mt-1 text-sm sm:text-base">
-                      <strong>Tags:</strong>{" "}
-                      {ci.tags?.length > 0 ? ci.tags.join(', ') : 'No tags'}
-                    </p>
-                    <p className="text-gray-600 mt-2 line-clamp-3 text-sm sm:text-base">
-                      <strong>Note:</strong> {ci.note || 'No notes available.'}
-                    </p>
-                  </Link>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 text-center py-10 italic select-none">
-                No check-ins available.
-              </p>
-            )}
-          </div>
-        </div>
+        <CheckinBetweenDates />
+
+        <section className="checkin-history-panel surface-card">
+          <div className="surface-card-heading"><div><span className="section-eyebrow">A LOOK BACK</span><h2>Your saved check-ins</h2><p>Every entry is a snapshot, not a scorecard.</p></div><span className="history-count">{ordered.length} {ordered.length === 1 ? 'entry' : 'entries'}</span></div>
+          {loading ? <div className="history-loading"><span /><span /><span /></div> : ordered.length ? (
+            <div className="checkin-history-list">
+              {ordered.map((item) => {
+                const mood = String(item.mood || '').toLowerCase();
+                const [emoji, moodClass] = moodStyle[mood] || ['✍️', 'mood-sun'];
+                const date = item.date || item.checkin_date;
+                return (
+                  <article className="checkin-history-row" key={item.id}>
+                    <span className={'history-mood-avatar ' + moodClass}>{emoji}</span>
+                    <div className="checkin-history-main"><span className="history-date"><CalendarDays size={13} /> {displayDate(date)}</span><strong>{mood ? mood.charAt(0).toUpperCase() + mood.slice(1) : 'Daily reflection'}</strong><p>{item.note?.trim() || 'A quiet moment to check in with yourself.'}</p>{item.tags?.length > 0 && <div className="entry-tags">{item.tags.slice(0,4).map((tag) => <i key={tag}>#{tag}</i>)}</div>}</div>
+                    <div className="history-focus"><span>FOCUS</span><strong>{item.focus_percent ?? 0}%</strong><span className="history-focus-track"><span style={{ width: Math.max(0,Math.min(100,Number(item.focus_percent)||0)) + '%' }} /></span></div>
+                    <div className="history-row-actions"><Link to={'/checkins/' + item.id} aria-label="View check-in" title="View details"><ChevronRight size={17} /></Link><button type="button" aria-label="Delete check-in" title="Delete check-in" disabled={deletingId === item.id} onClick={() => removeCheckin(item.id)}>{deletingId === item.id ? <RefreshCw size={15} className="spin-icon" /> : <Trash2 size={15} />}</button></div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : <div className="empty-journal-state"><span className="empty-journal-icon"><ClipboardCheck size={22} /></span><strong>Your first check-in can start today.</strong><p>Choose a mood, note your focus, and save a moment just as it is.</p><Link className="button button-primary button-small" to="/checkins/new">Create a check-in <ArrowRight size={15} /></Link></div>}
+        </section>
       </div>
     </DashboardLayout>
-  );
-}
-
-/* Stat card with gradient icon background, scale on hover */
-function StatCard({ title, value, icon, color }) {
-  return (
-    <div className="bg-white rounded-xl shadow-lg p-4 flex items-center gap-4 hover:shadow-xl hover:scale-[1.03] transform transition duration-300 cursor-default">
-      <div
-        className={`w-12 h-12 flex items-center justify-center rounded-full text-white text-2xl font-bold bg-gradient-to-br ${color}`}
-      >
-        {icon}
-      </div>
-      <div>
-        <h3 className="text-gray-400 uppercase text-[10px] tracking-wide select-none">{title}</h3>
-        <p className="text-2xl font-extrabold text-gray-900">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function StreakCard({ streak }) {
-  if (!streak || Object.keys(streak).length === 0) return null;
-
-  return (
-    <div className="bg-white rounded-xl shadow-lg p-4 hover:shadow-xl hover:scale-[1.03] transform transition duration-300 cursor-default">
-      <h3 className="text-gray-400 uppercase text-[10px] mb-3 tracking-wide flex items-center gap-2 select-none">
-        <span className="text-xl">🔥</span> Streak Info
-      </h3>
-      <div className="space-y-3 text-gray-800 text-base font-semibold">
-        <p>
-          Current Streak: <span className="text-red-600">{streak.current_streak ?? 0} days</span>
-        </p>
-        <p>
-          Longest Streak: <span className="text-red-600">{streak.longest_streak ?? 0} days</span>
-        </p>
-        <p>
-          Last Check-In:{" "}
-          <span className="text-red-600">
-            {streak.last_checkin_date
-              ? new Date(streak.last_checkin_date).toLocaleDateString()
-              : "N/A"}
-          </span>
-        </p>
-      </div>
-    </div>
   );
 }

@@ -46,7 +46,7 @@ export default function App() {
       <Route path="/analytics" element={privatePage(<Analytics />)} />
       <Route path="/checkin" element={privatePage(<Checkins />, false)} />
       <Route path="/checkins/new" element={privatePage(<CreateCheckin />)} />
-      <Route path="/checkins/:id" element={privatePage(<CheckinDetail />, false)} />
+      <Route path="/checkins/:id" element={privatePage(<CheckinDetail />)} />
       <Route path="/checkins/:id/edit" element={privatePage(<EditCheckin />)} />
       <Route path="/journal/insights" element={privatePage(<JournalInsights />)} />
 

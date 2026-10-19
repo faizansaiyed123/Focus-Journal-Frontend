@@ -1,153 +1,69 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import {
-  fetchCheckinById,
-  updateCheckin,
-  deleteCheckin
-} from  '../checkinAPI';
-import useAuthStore from '../../auth/authStore';
-import DashboardLayout from '../../../layouts/DashboardLayout';
-import { motion } from 'framer-motion';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, CalendarDays, CheckCircle2, ClipboardCheck, Edit3, Flame, LoaderCircle, Trash2 } from 'lucide-react';
+import { deleteCheckin, fetchCheckinById } from '../checkinAPI';
+
+const moods = { bad: ['🌧️','Not great'], okay: ['🌤️','Okay'], good: ['🙂','Good'], great: ['✨','Great'], happy: ['🌞','Happy'] };
+function displayDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').slice(0,10));
+  return match ? new Date(Number(match[1]),Number(match[2])-1,Number(match[3])).toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'}) : 'Date unavailable';
+}
+function errorText(error) {
+  const detail = error?.response?.data?.detail;
+  return typeof detail === 'string' ? detail : 'This check-in could not be loaded. Please try again.';
+}
 
 export default function CheckinDetail() {
   const { id } = useParams();
-
-  const token = useAuthStore((state) => state.token);
-
-  const [mood, setMood] = useState("");
-  const [note, setNote] = useState("");
-  const [focusPercent, setFocusPercent] = useState(0);
-  const [tags, setTags] = useState([]);
   const navigate = useNavigate();
+  const [entry, setEntry] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!id || id === "undefined") {
-      return;
-    }
+    let cancelled = false;
+    fetchCheckinById(id).then((data) => { if (!cancelled) setEntry(data); })
+      .catch((requestError) => { if (!cancelled) setError(errorText(requestError)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id]);
 
-    const fetchData = async () => {
-      try {
-        const data = await fetchCheckinById(id, token);
-
-        setMood(data.mood || "");
-        setNote(data.note || "");
-        setFocusPercent(data.focus_percent || 0);
-        setTags(data.tags || []);
-
-        setCheckinData({
-          id: data.id,
-          mood: data.mood,
-          focus_percent: data.focus_percent,
-          tags: data.tags,
-          note: data.note,
-        });
-      } catch (error) {
-        // Handle error if needed
-      }
-    };
-
-    fetchData();
-  }, [id, token]);
-
-  const handleUpdate = async () => {
+  const remove = async () => {
+    if (!window.confirm('Delete this check-in? This cannot be undone.')) return;
+    setDeleting(true);
+    setError('');
     try {
-      const payload = {
-        mood,
-        note,
-        focus_percent: focusPercent,
-        tags,
-      };
-
-      await updateCheckin(id, payload, token);
-
-      // Re-fetch latest check-in data
-      const updatedData = await fetchCheckinById(id, token);
-      setMood(updatedData.mood || "");
-      setNote(updatedData.note || "");
-      setFocusPercent(updatedData.focus_percent || 0);
-      setTags(updatedData.tags || []);
-      navigate("/checkin");
-    } catch (error) {
-      // Handle error if needed
+      await deleteCheckin(id);
+      navigate('/checkin', { replace: true });
+    } catch {
+      setError('This check-in could not be deleted. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
+  if (loading) return <div className="journal-entry-page"><div className="insights-loading" /></div>;
+  if (!entry) return <div className="journal-entry-page"><div className="inline-notice" role="alert">{error || 'Check-in not found.'}<Link to="/checkin">Back to check-ins</Link></div></div>;
+
+  const mood = moods[String(entry.mood || '').toLowerCase()] || ['✍️',entry.mood || 'Reflection'];
+  const date = entry.date || entry.checkin_date;
+
   return (
-    <div className="p-4 max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Edit Check-in</h2>
-      <motion.button
-        onClick={() => navigate('/checkin')}
-        className="flex items-center text-gray-700 text-sm bg-white border border-gray-300 rounded px-4 py-2 mb-4 hover:bg-gray-100"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <span className="mr-2">🔙</span> Back to Check-Ins
-      </motion.button>
-
-      {/* Mood */}
-      <label className="block mb-2 font-medium">Mood</label>
-      <select
-        className="w-full border p-2 rounded mb-4"
-        value={mood}
-        onChange={(e) => setMood(e.target.value)}
-      >
-        <option value="">Select mood</option>
-        <option value="bad">Bad</option>
-        <option value="okay">Okay</option>
-        <option value="good">Good</option>
-        <option value="great">Great</option>
-      </select>
-
-      {/* Focus Percent */}
-      <label className="block mb-2 font-medium">Focus Percent</label>
-      <input
-        type="number"
-        className="w-full border p-2 rounded mb-4"
-        value={focusPercent}
-        onChange={(e) => {
-          const value = parseInt(e.target.value, 10);
-          if (!isNaN(value)) {
-            setFocusPercent(value);
-          } else {
-            setFocusPercent(0);
-          }
-        }}
-        min={0}
-        max={100}
-      />
-
-      {/* Tags */}
-      <label className="block mb-2 font-medium">Tags (comma-separated)</label>
-      <input
-        type="text"
-        className="w-full border p-2 rounded mb-4"
-        value={tags.join(",")}
-        onChange={(e) => {
-          const tagList = e.target.value
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag.length > 0);
-          setTags(tagList);
-        }}
-        placeholder="e.g. focus, work, personal"
-      />
-
-      {/* Note */}
-      <label className="block mb-2 font-medium">Note</label>
-      <textarea
-        className="w-full border p-2 rounded mb-4"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={4}
-      />
-
-      <button
-        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        onClick={handleUpdate}
-      >
-        Update Check-in
-      </button>
+    <div className="journal-entry-page">
+      <Link to="/checkin" className="back-link"><ArrowLeft size={16} /> All check-ins</Link>
+      <article className="journal-entry-detail-card">
+        <div className="journal-entry-detail-top"><span className="entry-detail-icon"><ClipboardCheck size={22} /></span><span className="entry-detail-date"><CalendarDays size={14} /> {displayDate(date)}</span></div>
+        <span className="section-eyebrow">A MOMENT, SAVED</span>
+        <h1>Your daily check-in</h1>
+        <p className="journal-entry-subtitle">A small snapshot of how that day felt.</p>
+        <div className="checkin-detail-mood"><span>{mood[0]}</span><div><small>HOW YOU FELT</small><strong>{mood[1]}</strong></div><span className="checkin-detail-focus">{entry.focus_percent ?? 0}% focus</span></div>
+        <div className="checkin-detail-focus-bar"><span style={{width:Math.max(0,Math.min(100,Number(entry.focus_percent)||0))+'%'}} /></div>
+        <section className="journal-entry-note"><span className="section-eyebrow">A NOTE TO YOURSELF</span><p>{entry.note?.trim() || 'No note was added to this check-in.'}</p></section>
+        {entry.tags?.length > 0 && <section className="checkin-detail-tags"><span className="section-eyebrow">TAGS</span><div>{entry.tags.map((tag)=><span className="tag-chip" key={tag}>#{tag}</span>)}</div></section>}
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="journal-detail-actions"><Link className="button button-primary" to={'/checkins/'+id+'/edit'}><Edit3 size={16} /> Edit check-in</Link><button className="button button-quiet danger-quiet-button" onClick={remove} disabled={deleting}>{deleting ? <LoaderCircle size={15} className="spin-icon" /> : <Trash2 size={15} />} Delete entry</button></div>
+      </article>
     </div>
   );
 }
