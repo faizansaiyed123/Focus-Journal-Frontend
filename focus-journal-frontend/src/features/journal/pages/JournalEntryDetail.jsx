@@ -1,104 +1,64 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { fetchJournalById } from '../journalAPI';
-import useAuthStore from '../../auth/authStore';
-import { motion } from 'framer-motion';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Heart, Leaf, LoaderCircle, Pencil, Sparkles, Trash2 } from 'lucide-react';
+import { deleteJournal, fetchJournalById } from '../journalAPI';
+
+function prettyDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Saved journal entry' : date.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+}
+function errorText(error) {
+  const detail = error?.response?.data?.detail;
+  return typeof detail === 'string' ? detail : 'This entry could not be loaded. Please try again.';
+}
 
 export default function JournalEntryDetail() {
   const { id } = useParams();
-  const token = useAuthStore((state) => state.token);
   const navigate = useNavigate();
-
   const [entry, setEntry] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await fetchJournalById(id, token);
-        setEntry(data);
-      } catch (err) {
-        setError('Failed to load journal entry. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [id, token]);
+    let cancelled = false;
+    fetchJournalById(id).then((data) => { if (!cancelled) setEntry(data); })
+      .catch((requestError) => { if (!cancelled) setError(errorText(requestError)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const remove = async () => {
+    if (!window.confirm('Delete this journal entry? This cannot be undone.')) return;
+    setDeleting(true);
+    setError('');
+    try {
+      await deleteJournal(id);
+      navigate('/journal', { replace: true });
+    } catch {
+      setError('This journal entry could not be deleted. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-  if (error) {
-    return <p className="text-center text-red-500">{error}</p>;
-  }
-
-  if (!entry) {
-    return <p className="text-center text-gray-500">Entry not found.</p>;
-  }
+  if (loading) return <div className="journal-entry-page"><div className="insights-loading" /></div>;
+  if (!entry) return <div className="journal-entry-page"><div className="inline-notice" role="alert">{error || 'Journal entry not found.'}<Link to="/journal">Back to your journal</Link></div></div>;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="max-w-3xl mx-auto py-10 px-6 bg-white rounded-xl shadow-md"
-    >
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">{entry.title}</h1>
-        <span className="text-2xl">{entry.mood || '📝'}</span>
-      </div>
-
-      <p className="text-sm text-gray-500 mb-2">
-        {new Date(entry.created_at).toLocaleDateString()} • Focus: {entry.focus_percent}%
-      </p>
-
-      <div className="text-gray-800 whitespace-pre-line mb-4">
-        {entry.content}
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-6">
-        {entry.tags?.map((tag, i) => (
-          <span
-            key={i}
-            className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full"
-          >
-            #{tag}
-          </span>
-        ))}
-      </div>
-
-      <div className="flex gap-4">
-        <Link to={`/journal/edit/${entry.id}`}>
-          <button className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
-            ✏️ Edit
-          </button>
-        </Link>
-        <button
-          onClick={() => {
-            // TODO: add delete logic
-            alert('🛑 Delete not implemented yet');
-          }}
-          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-        >
-          🗑️ Delete
-        </button>
-        <button
-          onClick={() => {
-            // TODO: add AI insights
-            alert('💡 AI insights are for Pro users');
-          }}
-          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-        >
-          🧠 View AI Insights
-        </button>
-      </div>
-    </motion.div>
+    <div className="journal-entry-page">
+      <Link to="/journal" className="back-link"><ArrowLeft size={16} /> All journal entries</Link>
+      <article className="journal-entry-detail-card">
+        <div className="journal-entry-detail-top"><span className="entry-detail-icon"><BookOpen size={22} /></span><span className="entry-detail-date"><CalendarDays size={14} /> {prettyDate(entry.created_at)}</span></div>
+        <span className="section-eyebrow">A PAGE FROM YOUR STORY</span>
+        <h1>{entry.title || 'An untitled moment'}</h1>
+        <div className="journal-detail-meta"><span>{entry.mood || 'A reflection'}</span>{entry.focus_percent != null && <span>{entry.focus_percent}% focus</span>}{entry.is_favorite && <span><Heart size={13} fill="currentColor" /> Favorite</span>}</div>
+        <div className="journal-entry-content">{entry.content?.trim() || 'You saved this moment without a written note.'}</div>
+        {entry.tags?.length > 0 && <div className="journal-entry-tags">{entry.tags.map((tag)=><span className="tag-chip" key={tag}>#{tag}</span>)}</div>}
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="journal-detail-actions"><Link className="button button-primary" to={'/journal/edit/'+id}><Pencil size={15} /> Edit entry</Link><Link className="button button-quiet" to="/journal/insights"><Sparkles size={15} /> Journal insights</Link><button className="button button-quiet danger-quiet-button" type="button" onClick={remove} disabled={deleting}>{deleting ? <LoaderCircle size={15} className="spin-icon" /> : <Trash2 size={15} />} Delete</button></div>
+      </article>
+      <p className="journal-entry-private-note"><Leaf size={14} /> A moment is not the whole story. Keep writing.</p>
+    </div>
   );
 }

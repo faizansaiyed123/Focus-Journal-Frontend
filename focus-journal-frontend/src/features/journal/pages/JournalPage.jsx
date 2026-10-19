@@ -1,204 +1,99 @@
-import { useEffect, useState } from 'react';
-import { fetchAllJournals } from '../journalAPI';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ArrowRight, BookOpen, CalendarDays, ChevronDown, LoaderCircle, Plus, RotateCcw, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { fetchAllJournals } from '../journalAPI';
+import { searchJournals } from '../journalInsightsApi';
 import useAuthStore from '../../auth/authStore';
-import { motion } from 'framer-motion';
-import { FaSearch, FaTags, FaSmile, FaSort } from 'react-icons/fa';
+
+function shortDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Saved entry' : date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+}
+function errorText(error) {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map((item)=>item.msg).filter(Boolean).join(' ');
+  return 'Your journal could not be loaded. Please try again.';
+}
 
 export default function JournalPage() {
+  const token = useAuthStore((state) => state.token);
   const [journals, setJournals] = useState([]);
-  const [filtered, setFiltered] = useState([]);
-  const [search, setSearch] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [activeQuery, setActiveQuery] = useState('');
+  const [remoteResults, setRemoteResults] = useState(null);
   const [tag, setTag] = useState('');
   const [mood, setMood] = useState('');
   const [sort, setSort] = useState('newest');
   const [loading, setLoading] = useState(true);
-  const token = useAuthStore((state) => state.token);
-
-  const allTags = [...new Set(journals.flatMap((j) => j.tags || []))].filter(Boolean);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadJournals = async () => {
-      setLoading(true);
-      try {
-        const data = await fetchAllJournals(token);
-        setJournals(data);
-        setFiltered(data); // Initialize filtered state with all journals
-      } catch (err) {
-        console.error('❌ Failed to fetch journals:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (token) loadJournals();
+    let cancelled = false;
+    fetchAllJournals(token).then((data)=>{ if (!cancelled) setJournals(Array.isArray(data)?data:[]); })
+      .catch((requestError)=>{ if (!cancelled) setError(errorText(requestError)); })
+      .finally(()=>{ if (!cancelled) setLoading(false); });
+    return ()=>{cancelled=true;};
   }, [token]);
 
-  useEffect(() => {
-    let result = [...journals];
+  const allTags = useMemo(()=>[...new Set(journals.flatMap((entry)=>entry.tags||[]).filter(Boolean))].sort(),[journals]);
+  const allMoods = useMemo(()=>[...new Set(journals.map((entry)=>entry.mood).filter(Boolean))].sort(),[journals]);
+  const visible = useMemo(()=>{
+    const source = activeQuery ? (remoteResults || []) : journals;
+    return [...source].filter((entry)=>!tag||(entry.tags||[]).some((value)=>value.toLowerCase()===tag.toLowerCase()))
+      .filter((entry)=>!mood||String(entry.mood||'').toLowerCase()===mood.toLowerCase())
+      .sort((a,b)=>sort==='newest'?new Date(b.created_at)-new Date(a.created_at):new Date(a.created_at)-new Date(b.created_at));
+  },[journals,activeQuery,remoteResults,tag,mood,sort]);
 
-    // Apply search filter
-    if (search.trim()) {
-      result = result.filter((entry) =>
-        `${entry.title} ${entry.content}`.toLowerCase().includes(search.toLowerCase())
-      );
+  const submitSearch = async (event) => {
+    event.preventDefault();
+    const keyword = searchText.trim();
+    setTag('');
+    setMood('');
+    setError('');
+    if (!keyword) { setActiveQuery(''); setRemoteResults(null); return; }
+    setSearching(true);
+    try {
+      const results = await searchJournals(token, keyword);
+      setRemoteResults(Array.isArray(results)?results:[]);
+      setActiveQuery(keyword);
+    } catch (requestError) {
+      setError(errorText(requestError));
+    } finally {
+      setSearching(false);
     }
+  };
 
-    // Apply tag filter
-    if (tag.trim()) {
-      result = result.filter((entry) => entry.tags?.includes(tag));
-    }
-
-    // Apply mood filter
-    if (mood.trim()) {
-      result = result.filter((entry) => (entry.mood || '').toLowerCase().includes(mood.toLowerCase()));
-    }
-
-    // Apply sorting
-    result.sort((a, b) => {
-      const dateA = new Date(a.created_at);
-      const dateB = new Date(b.created_at);
-      return sort === 'newest' ? dateB - dateA : dateA - dateB;
-    });
-
-    setFiltered(result);
-  }, [search, tag, mood, sort, journals]);
+  const clearFilters = () => {
+    setSearchText('');
+    setActiveQuery('');
+    setRemoteResults(null);
+    setTag('');
+    setMood('');
+    setSort('newest');
+    setError('');
+  };
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-6">
-      {/* Header and Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold">📓 Journal</h1>
+    <div className="journal-library-page">
+      <header className="secondary-page-header">
+        <div><span className="section-eyebrow"><span className="eyebrow-dot" /> YOUR THOUGHTS, KEPT CLOSE</span><h1>Your journal</h1><p>A growing collection of moments, ideas, and things you’ve noticed.</p></div>
+        <Link className="button button-primary" to="/journal/create"><Plus size={17} /> New entry</Link>
+      </header>
 
-        <div className="flex gap-3">
-          {/* Back Button */}
-          <button
-            onClick={() => window.history.back()}
-            className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition border border-gray-300"
-          >
-            <span>🔙</span> Back
-          </button>
+      <section className="journal-library-tools surface-card">
+        <form className="journal-search-form" onSubmit={submitSearch}><span className="journal-search-icon"><Search size={17} /></span><input aria-label="Search journal entries" value={searchText} onChange={(event)=>setSearchText(event.target.value)} placeholder="Search your saved words…" maxLength={200} /><button className="button button-primary button-small" type="submit" disabled={searching}>{searching?<LoaderCircle size={14} className="spin-icon" />:<Search size={14} />} Search</button></form>
+        <div className="journal-filter-row"><span className="journal-filter-label"><SlidersHorizontal size={14} /> REFINE YOUR VIEW</span><label className="journal-select-wrap"><span>Tag</span><select className="journal-filter-select" value={tag} onChange={(event)=>setTag(event.target.value)}><option value="">All tags</option>{allTags.map((item)=><option value={item} key={item}>{item}</option>)}</select><ChevronDown size={13} /></label><label className="journal-select-wrap"><span>Mood</span><select className="journal-filter-select" value={mood} onChange={(event)=>setMood(event.target.value)}><option value="">All moods</option>{allMoods.map((item)=><option value={item} key={item}>{item}</option>)}</select><ChevronDown size={13} /></label><label className="journal-select-wrap"><span>Sort</span><select className="journal-filter-select" value={sort} onChange={(event)=>setSort(event.target.value)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select><ChevronDown size={13} /></label><button className="journal-reset-button" type="button" onClick={clearFilters}><RotateCcw size={13} /> Reset</button></div>
+      </section>
 
-          {/* New Entry Button */}
-          <Link to="/journal/create">
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
-              ➕ New Entry
-            </button>
-          </Link>
-        </div>
-      </div>
+      {error && <div className="inline-notice" role="status">{error}<button type="button" onClick={clearFilters}>Clear</button></div>}
+      <div className="journal-library-heading"><div><h2>{activeQuery ? 'Search results' : 'All entries'}</h2>{activeQuery && <p>Showing matches for “{activeQuery}”</p>}</div><span>{visible.length} {visible.length===1?'entry':'entries'}</span></div>
 
-      {/* Animated Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
-      >
-        {/* Search */}
-        <div className="relative">
-          <FaSearch className="absolute top-3 left-3 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search title or notes..."
-            className="pl-10 p-2 w-full border rounded-md focus:ring-2 focus:ring-blue-400 transition"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        {/* Tag Filter */}
-        <div className="relative">
-          <FaTags className="absolute top-3 left-3 text-gray-400" />
-          <input
-            list="tag-suggestions"
-            type="text"
-            placeholder="Filter by tag"
-            className="pl-10 p-2 w-full border rounded-md focus:ring-2 focus:ring-purple-400 transition"
-            value={tag}
-            onChange={(e) => setTag(e.target.value)}
-          />
-          <datalist id="tag-suggestions">
-            {allTags.map((t) => (
-              <option key={t} value={t} />
-            ))}
-          </datalist>
-        </div>
-
-        {/* Mood Filter */}
-        <div className="relative">
-          <FaSmile className="absolute top-3 left-3 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Filter by mood"
-            className="pl-10 p-2 w-full border rounded-md focus:ring-2 focus:ring-pink-300 transition"
-            value={mood}
-            onChange={(e) => setMood(e.target.value)}
-          />
-        </div>
-
-        {/* Sort Dropdown */}
-        <div className="relative">
-          <FaSort className="absolute top-3 left-3 text-gray-400" />
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="pl-10 p-2 w-full border rounded-md focus:ring-2 focus:ring-yellow-400 transition"
-          >
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-          </select>
-        </div>
-      </motion.div>
-
-      {/* Loading Spinner */}
-      {loading ? (
-        <div className="flex justify-center py-10">
-          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <p className="text-gray-500">No entries found.</p>
-      ) : (
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0, y: 10 },
-            visible: { opacity: 1, y: 0, transition: { staggerChildren: 0.1 } },
-          }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {filtered.map((entry) => (
-            <motion.div
-              key={entry.id}
-              variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-              whileHover={{ scale: 1.02 }}
-            >
-              <Link to={`/journal/entry/${entry.id}`}>
-                <div className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer">
-                  <div className="flex justify-between items-center mb-2">
-                    <h2 className="font-semibold">{entry.title}</h2>
-                    <span className="text-xl">{entry.mood || '📝'}</span>
-                  </div>
-                  <p className="text-xs text-gray-400 mb-2">
-                    {new Date(entry.created_at).toLocaleDateString()}
-                  </p>
-                  <p className="text-gray-700 text-sm line-clamp-3">{entry.content}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {entry.tags?.map((tag, i) => (
-                      <span
-                        key={i}
-                        className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
+      {loading || searching ? <div className="journal-grid-skeleton"><span /><span /><span /></div> : visible.length ? (
+        <div className="journal-library-grid">{visible.map((entry,index)=><Link className="journal-library-card" to={'/journal/entry/'+entry.id} key={entry.id}><div className="journal-card-top"><span className={'journal-card-index index-'+(index%3)}>{String(index+1).padStart(2,'0')}</span><span className="journal-card-date"><CalendarDays size={12} /> {shortDate(entry.created_at)}</span></div><h3>{entry.title||'An untitled moment'}</h3><p>{(entry.content||'A moment captured for later.').trim().replace(/\s+/g,' ').slice(0,175)}{(entry.content||'').length>175?'…':''}</p><div className="journal-card-meta">{entry.mood&&<span>{entry.mood}</span>}{entry.focus_percent!=null&&<span>{entry.focus_percent}% focus</span>}</div>{entry.tags?.length>0&&<div className="entry-tags">{entry.tags.slice(0,4).map((item)=><i key={item}>#{item}</i>)}</div>}<span className="journal-card-open">Read entry <ArrowRight size={14} /></span></Link>)}</div>
+      ) : <div className="empty-journal-state journal-library-empty"><span className="empty-journal-icon">{activeQuery?<Search size={22}/>:<BookOpen size={22}/>}</span><strong>{activeQuery?'No matching entries yet.':'Your first page is waiting.'}</strong><p>{activeQuery?'Try another keyword or clear the filters to see all your entries.':'Write a thought, save a moment, or make a little room to reflect.'}</p><div className="empty-state-actions">{activeQuery&&<button className="button button-quiet" type="button" onClick={clearFilters}>Clear search</button>}<Link className="button button-primary button-small" to="/journal/create">{activeQuery?'Write a new entry':'Write your first entry'} <ArrowRight size={15}/></Link></div></div>}
+      <p className="journal-library-footnote"><Sparkles size={13} /> Your journal is for reflection, not perfection.</p>
     </div>
   );
 }

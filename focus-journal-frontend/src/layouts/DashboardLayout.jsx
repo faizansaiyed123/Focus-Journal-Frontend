@@ -1,69 +1,62 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Menu, X, LogOut, UserRound } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
+import useAuthStore from '../features/auth/authStore';
+
+const routeTitles = [
+  ['/dashboard', 'Your dashboard'],
+  ['/journal/create', 'New journal entry'],
+  ['/journal/edit', 'Edit journal entry'],
+  ['/journal/entry', 'Journal entry'],
+  ['/journal', 'Your journal'],
+  ['/checkins/new', 'Daily check-in'],
+  ['/checkins/', 'Check-in details'],
+  ['/checkin', 'Your check-ins'],
+  ['/analytics', 'Your patterns'],
+  ['/journal/insights', 'Journal insights'],
+  ['/goals', 'Your goals'],
+];
 
 export default function DashboardLayout({ children }) {
-  const [darkMode, setDarkMode] = useState(() => {
-    // Persist dark mode in localStorage
-    const stored = localStorage.getItem('darkMode');
-    return stored === 'true';
-  });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => setMobileOpen(false), [location.pathname]);
 
-  useEffect(() => {
-    // Add/remove the 'dark' class to <html> element
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('darkMode', 'true');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('darkMode', 'false');
-    }
-  }, [darkMode]);
+  const title = routeTitles.find(([path]) => location.pathname === path || location.pathname.startsWith(path + '/'));
+  const pageTitle = title ? title[1] : 'Your personal space';
+  const displayName = user && (user.full_name || user.name)
+    ? (user.full_name || user.name)
+    : (user && user.email ? user.email : 'Your space');
+  const initials = displayName.split(/[ @._-]/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('');
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
-      {/* Top bar on mobile */}
-      <div className="md:hidden bg-white dark:bg-gray-800 shadow px-4 py-3 flex justify-between items-center">
-        <h1 className="text-lg font-semibold">Dashboard</h1>
-
-        <div className="flex items-center gap-2">
-          {/* Dark mode toggle */}
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="px-3 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-sm shadow hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-          >
-            {darkMode ? '🌞 Light Mode' : '🌙 Dark Mode'}
+    <div className="workspace-shell">
+      {mobileOpen && <button className="workspace-overlay" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
+      <Sidebar mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
+      <div className="workspace-main">
+        <header className="workspace-topbar">
+          <button className="mobile-menu-button" type="button" aria-label={mobileOpen ? 'Close menu' : 'Open menu'} onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X size={21} /> : <Menu size={21} />}
           </button>
-
-          {/* Sidebar toggle */}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle Sidebar">
-            <svg
-              className="w-6 h-6 text-gray-700 dark:text-gray-200"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {sidebarOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
-        </div>
+          <div className="topbar-page-context"><span>YOUR SPACE</span><strong>{pageTitle}</strong></div>
+          <div className="topbar-user-area">
+            <div className="topbar-user-avatar" aria-hidden="true">{initials || <UserRound size={18} />}</div>
+            <div className="topbar-user-copy"><strong>{displayName.split(' ')[0]}</strong><span>Personal journal</span></div>
+            <button className="topbar-logout" type="button" onClick={handleLogout}><LogOut size={16} /><span>Log out</span></button>
+          </div>
+        </header>
+        <main className="workspace-content">{children}</main>
       </div>
-
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block w-full md:w-64 bg-gray-100 dark:bg-gray-800 border-r dark:border-gray-700`}>
-        <Sidebar />
-      </div>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-auto p-4 bg-white dark:bg-gray-900 transition-colors duration-300">
-        {children}
-      </main>
     </div>
   );
 }

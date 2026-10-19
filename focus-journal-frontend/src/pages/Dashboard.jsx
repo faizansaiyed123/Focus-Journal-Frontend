@@ -1,533 +1,412 @@
-// import { useState, useEffect } from 'react';
-// import { useNavigate, Link } from 'react-router-dom';
-// import DashboardLayout from '../layouts/DashboardLayout';
-// import useAuthStore from '../features/auth/authStore';
-// import { fetchAllJournals, fetchJournalStats } from '../features/journal/journalAPI';
-// import JournalTags from '../features/journal/pages/JournalTags';
-// import JournalCalendar from '../features/journal/pages/JournalCalendar';
-// import { searchJournals } from '../features/journal/journalInsightsApi';
-// import SummaryDashboard from '../features/summary/pages/SummaryDashboard';
-
-// export default function Dashboard() {
-//   const [journals, setJournals] = useState([]);
-//   const [stats, setStats] = useState(null);
-//   const [searchKeyword, setSearchKeyword] = useState('');
-//   const [searchResults, setSearchResults] = useState([]);
-//   const [isSearching, setIsSearching] = useState(false);
-
-//   const token = useAuthStore((state) => state.token);
-//   const logout = useAuthStore((state) => state.logout);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     if (!token) {
-//       navigate('/login');
-//       return;
-//     }
-
-//     const loadJournals = async () => {
-//       try {
-//         const data = await fetchAllJournals(token);
-//         setJournals(data);
-//       } catch (error) {
-//         if (error.response?.status === 401) {
-//           logout();
-//           navigate('/login');
-//         }
-//       }
-//     };
-
-//     const loadStats = async () => {
-//       try {
-//         const data = await fetchJournalStats(token);
-//         setStats(data);
-//       } catch (err) {
-//       }
-//     };
-
-//     loadJournals();
-//     loadStats();
-//   }, [token, logout, navigate]);
-
-//   const handleSearch = async () => {
-//     if (!searchKeyword.trim()) return;
-//     setIsSearching(true);
-//     try {
-//       const results = await searchJournals(token, searchKeyword);
-//       setSearchResults(results);
-//     } catch (error) {
-//     } finally {
-//       setIsSearching(false);
-//     }
-//   };
-
-//   const handleClearSearch = () => {
-//     setSearchKeyword('');
-//     setSearchResults([]);
-//   };
-
-//   return (
-//     <DashboardLayout>
-//       <h2 className="text-xl font-semibold text-gray-800 mb-4">🔎 Search Journal Entries</h2>
-//         {/* Container for Search Bar and Logout Button */}
-//         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center sm:gap-6 mb-6">
-//           {/* Search Bar */}
-//           <div className="w-full sm:w-3/4 md:w-1/2 lg:w-1/3 flex gap-3 mb-4 sm:mb-0">
-//             <input
-//               type="text"
-//               value={searchKeyword}
-//               onChange={(e) => setSearchKeyword(e.target.value)}
-//               placeholder="Search by keyword..."
-//               className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-//             />
-//             <button
-//               onClick={handleSearch}
-//               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-//             >
-//               Search
-//             </button>
-//             {searchResults.length > 0 && (
-//               <button
-//                 onClick={handleClearSearch}
-//                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-//               >
-//                 Clear
-//               </button>
-//             )}
-//           </div>
-
-//           {/* Logout Button */}
-//       <button
-//         onClick={logout}
-//         className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 w-full sm:w-auto mt-4 sm:mt-0"
-//       >
-//         <span className="text-lg sm:text-xl">⚡</span>
-//         <span className="hidden sm:inline">Logout</span>
-//       </button>
-
-//         </div>
-//       <SummaryDashboard />
-//       <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col">
-        
-
-//         {/* Rest of the Content */}
-//         <section className="mb-12">
-          
-//           {isSearching ? (
-//             <p className="text-gray-500">Searching...</p>
-//           ) : searchResults.length > 0 ? (
-//             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-//               {searchResults.map((entry) => (
-//                 <div
-//                   key={entry.id}
-//                   className="bg-white p-5 rounded-lg shadow hover:shadow-lg transition duration-200"
-//                 >
-//                   <div className="flex justify-between items-center mb-2">
-//                     <h3 className="text-lg font-semibold text-gray-900">{entry.title}</h3>
-//                     <span className="text-2xl">{entry.mood || '📝'}</span>
-//                   </div>
-//                   <p className="text-sm text-gray-600 mb-2">Focus: {entry.focus_percent || 0}%</p>
-//                   <p className="text-gray-700 text-sm line-clamp-3">{entry.content}</p>
-//                   {entry.tags?.length > 0 && (
-//                     <div className="mt-3 flex flex-wrap gap-2">
-//                       {entry.tags.map((tag, i) => (
-//                         <span
-//                           key={i}
-//                           className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full"
-//                         >
-//                           #{tag}
-//                         </span>
-//                       ))}
-//                     </div>
-//                   )}
-//                 </div>
-//               ))}
-//             </div>
-//           ) : searchKeyword && (
-//             <p className="text-gray-500">No journal entries found for "{searchKeyword}".</p>
-//           )}
-//         </section>
-
-//         {/* Header */}
-//         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-//           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-//             📘 Dashboard
-//           </h1>
-//           <div className="flex gap-3">
-//             <Link
-//               to="/journal/create"
-//               className="inline-flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold px-5 py-3 rounded-lg border border-blue-200 transition duration-200 shadow-sm"
-//             >
-//               <span className="text-lg">➕</span>
-//               New Journal Entry
-//             </Link>
-
-//             <Link
-//               to="/checkins/new"
-//               className="inline-flex items-center gap-2 bg-green-50 hover:bg-green-100 text-green-700 font-semibold px-5 py-3 rounded-lg border border-green-200 transition duration-200 shadow-sm"
-//             >
-//               <span className="text-lg">✅</span>
-//               New Check-In
-//             </Link>
-//           </div>
-//         </div>
-
-//         {/* Stats Section */}
-//         {stats && (
-//           <section className="mb-10">
-//             <h2 className="text-xl font-semibold text-gray-800 mb-4">📊 Journal Statistics</h2>
-//             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-//               <div className="bg-white p-6 rounded-lg shadow">
-//                 <h3 className="text-blue-600 font-medium mb-2">📝 Total Entries</h3>
-//                 <p className="text-3xl font-bold text-gray-900">{stats.total_entries}</p>
-//               </div>
-//               <div className="bg-white p-6 rounded-lg shadow">
-//                 <h3 className="text-green-600 font-medium mb-2">🎯 Avg Focus</h3>
-//                 <p className="text-3xl font-bold text-gray-900">{stats.average_focus}%</p>
-//               </div>
-//               <div className="bg-white p-6 rounded-lg shadow">
-//                 <h3 className="text-pink-600 font-medium mb-2">😊 Common Moods</h3>
-//                 <div className="flex flex-wrap gap-2">
-//                   {stats.most_common_moods?.length ? (
-//                     stats.most_common_moods.map((mood, i) => (
-//                       <span key={i} className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm">
-//                         {mood}
-//                       </span>
-//                     ))
-//                   ) : (
-//                     <p className="text-sm text-gray-500">No data</p>
-//                   )}
-//                 </div>
-//               </div>
-//               <div className="bg-white p-6 rounded-lg shadow">
-//                 <h3 className="text-purple-600 font-medium mb-2">🏷️ Common Tags</h3>
-//                 <div className="flex flex-wrap gap-2">
-//                   {stats.most_used_tags?.length ? (
-//                     stats.most_used_tags.map((tag, i) => (
-//                       <span key={i} className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">
-//                         #{tag}
-//                       </span>
-//                     ))
-//                   ) : (
-//                     <p className="text-sm text-gray-500">No tags</p>
-//                   )}
-//                 </div>
-//               </div>
-//             </div>
-//           </section>
-//         )}
-
-//         {/* Journal Tags and Calendar */}
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-//           <JournalTags />
-//           <JournalCalendar />
-//         </div>
-
-//         {/* Recent Journal Entries */}
-//         <section>
-//           <h2 className="text-xl font-semibold text-gray-800 mb-4">🗂️ Recent Entries</h2>
-//           {journals.length === 0 ? (
-//             <p className="text-gray-500">No journal entries yet.</p>
-//           ) : (
-//             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-//               {journals.slice(0, 6).map((entry) => (
-//                 <div
-//                   key={entry.id}
-//                   className="bg-white p-5 rounded-lg shadow hover:shadow-lg transition duration-200"
-//                 >
-//                   <div className="flex justify-between items-center mb-2">
-//                     <h3 className="text-lg font-semibold text-gray-900">{entry.title}</h3>
-//                     <span className="text-2xl">{entry.mood || '📝'}</span>
-//                   </div>
-//                   <p className="text-sm text-gray-600 mb-2">Focus: {entry.focus_percent || 0}%</p>
-//                   <p className="text-gray-700 text-sm line-clamp-3">{entry.content}</p>
-//                   {entry.tags?.length > 0 && (
-//                     <div className="mt-3 flex flex-wrap gap-2">
-//                       {entry.tags.map((tag, i) => (
-//                         <span
-//                           key={i}
-//                           className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full"
-//                         >
-//                           #{tag}
-//                         </span>
-//                       ))}
-//                     </div>
-//                   )}
-//                 </div>
-//               ))}
-//             </div>
-//           )}
-//         </section>
-//       </div>
-//     </DashboardLayout>
-//   );
-// }
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import DashboardLayout from '../layouts/DashboardLayout';
-import useAuthStore from '../features/auth/authStore';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  fetchAllJournals,
-  fetchJournalStats
-} from '../features/journal/journalAPI';
-import JournalTags from '../features/journal/pages/JournalTags';
-import JournalCalendar from '../features/journal/pages/JournalCalendar';
-import { searchJournals } from '../features/journal/journalInsightsApi';
-import SummaryDashboard from '../features/summary/pages/SummaryDashboard';
+  ArrowRight,
+  ArrowUpRight,
+  BookOpen,
+  CalendarCheck,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Flame,
+  Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  Sparkles,
+  Timer,
+  TrendingUp,
+  X,
+} from 'lucide-react';
+import apiClient from '../api/apiClient';
+import useAuthStore from '../features/auth/authStore';
+import { fetchAllJournals, fetchJournalStats } from '../features/journal/journalAPI';
+import { fetchToday, fetchStreak, fetchCheckinHistory } from '../features/checkin/checkinAPI';
+import {
+  fetchFocusSessionSummary,
+  listFocusSessions,
+  startFocusSession,
+  transitionFocusSession,
+} from '../features/focus/focusSessionAPI';
+
+const localDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
+};
+
+const readableDate = (value) => {
+  if (!value) return 'Recently';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? 'Recently'
+    : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
+const durationLabel = (seconds) => {
+  const safeSeconds = Math.max(0, Number(seconds) || 0);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  if (hours > 0) return hours + 'h ' + String(minutes).padStart(2, '0') + 'm';
+  return minutes + 'm';
+};
+
+const timerLabel = (seconds) => {
+  const safeSeconds = Math.max(0, Number(seconds) || 0);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainder = safeSeconds % 60;
+  if (hours > 0) return [hours, minutes, remainder].map((part) => String(part).padStart(2, '0')).join(':');
+  return String(minutes).padStart(2, '0') + ':' + String(remainder).padStart(2, '0');
+};
+
+const errorDetail = (error, fallback) => {
+  const detail = error && error.response && error.response.data && error.response.data.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map((item) => item.msg).filter(Boolean).join(' ');
+  return fallback;
+};
+
+const moodEmoji = (mood) => ({
+  bad: '🌧️',
+  okay: '🌤️',
+  good: '🙂',
+  great: '✨',
+  happy: '🌞',
+}[String(mood || '').toLowerCase()] || '✍️');
 
 export default function Dashboard() {
-  const [journals, setJournals] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-
   const token = useAuthStore((state) => state.token);
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!token) {
+  const [profile, setProfile] = useState(null);
+  const [journals, setJournals] = useState([]);
+  const [journalStats, setJournalStats] = useState(null);
+  const [todayData, setTodayData] = useState(null);
+  const [streak, setStreak] = useState(null);
+  const [checkinHistory, setCheckinHistory] = useState([]);
+  const [focusSummary, setFocusSummary] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState('');
+  const [sessionTitle, setSessionTitle] = useState('Focused work');
+  const [plannedMinutes, setPlannedMinutes] = useState('25');
+  const [focusSession, setFocusSession] = useState(null);
+  const [sessionError, setSessionError] = useState('');
+  const [sessionBusy, setSessionBusy] = useState('');
+  const [sessionAnchor, setSessionAnchor] = useState(Date.now());
+  const [clock, setClock] = useState(Date.now());
+
+  const refreshDashboard = useCallback(async () => {
+    setLoading(true);
+    setPageError('');
+    const results = await Promise.allSettled([
+      apiClient.get('/auth/me').then((response) => response.data),
+      fetchAllJournals(token),
+      fetchJournalStats(token),
+      fetchToday(token),
+      fetchStreak(token),
+      fetchCheckinHistory(7),
+      listFocusSessions(10, 0),
+      fetchFocusSessionSummary(),
+    ]);
+
+    if (results[0].status === 'rejected' && results[0].reason && results[0].reason.response?.status === 401) {
+      logout();
       navigate('/login');
       return;
     }
 
-    (async () => {
-      try {
-        const data = await fetchAllJournals(token);
-        setJournals(data);
-        const statsRes = await fetchJournalStats(token);
-        setStats(statsRes);
-      } catch (err) {
-        if (err.response?.status === 401) logout();
-        navigate('/login');
-      }
-    })();
+    const valueAt = (index, fallback) => results[index].status === 'fulfilled' ? results[index].value : fallback;
+    const user = valueAt(0, null);
+    const entries = valueAt(1, []);
+    const stats = valueAt(2, null);
+    const today = valueAt(3, null);
+    const streakData = valueAt(4, null);
+    const history = valueAt(5, []);
+    const sessionPage = valueAt(6, { items: [] });
+    const summary = valueAt(7, null);
+
+    setProfile(user);
+    setJournals(Array.isArray(entries) ? entries : []);
+    setJournalStats(stats);
+    setTodayData(today);
+    setStreak(streakData);
+    setCheckinHistory(Array.isArray(history) ? history : []);
+    setSessions(Array.isArray(sessionPage.items) ? sessionPage.items : []);
+    setFocusSummary(summary);
+
+    const active = (sessionPage.items || []).find((session) => ['running', 'paused'].includes(session.status));
+    setFocusSession(active || null);
+    setSessionAnchor(Date.now());
+    setClock(Date.now());
+
+    const anyFailure = results.some((result) => result.status === 'rejected');
+    if (results[0].status === 'rejected') {
+      setPageError('Your profile could not be loaded. Check your connection and refresh.');
+    } else if (anyFailure) {
+      setPageError('Some history could not be refreshed. Your saved journal and remaining data are still available.');
+    }
+    setLoading(false);
   }, [token, logout, navigate]);
 
-  const handleSearch = async () => {
-    if (!searchKeyword.trim()) return;
-    setIsSearching(true);
+  useEffect(() => {
+    if (!token) {
+      navigate('/login', { replace: true });
+      return;
+    }
+    refreshDashboard();
+  }, [token, navigate, refreshDashboard]);
+
+  useEffect(() => {
+    if (!focusSession || focusSession.status !== 'running') return undefined;
+    const interval = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [focusSession && focusSession.status]);
+
+  const nowDate = useMemo(() => new Date(), []);
+  const todayKey = localDateKey(new Date());
+  const fullName = profile && (profile.full_name || profile.name)
+    ? (profile.full_name || profile.name).split(' ')[0]
+    : (profile && profile.email ? profile.email.split('@')[0] : 'there');
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  const todayCheckin = checkinHistory.find((item) => String(item.date || item.checkin_date || '').slice(0, 10) === todayKey);
+  const checkedIn = Boolean((todayData && (todayData.checked || (todayData.data && todayData.data.checked_in))) || todayCheckin);
+  const recentJournals = [...journals].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3);
+  const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    const key = localDateKey(date);
+    const entry = checkinHistory.find((item) => String(item.date || item.checkin_date || '').slice(0, 10) === key);
+    return {
+      key,
+      label: date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 1),
+      day: date.getDate(),
+      complete: Boolean(entry),
+      today: key === todayKey,
+    };
+  });
+
+  const elapsedSeconds = Math.max(
+    0,
+    (Number(focusSession && focusSession.elapsed_seconds) || 0) +
+      (focusSession && focusSession.status === 'running' ? Math.floor((clock - sessionAnchor) / 1000) : 0)
+  );
+  const plannedSeconds = Number(focusSession && focusSession.planned_duration_seconds) || 0;
+  const timerProgress = plannedSeconds ? Math.min(100, Math.round((elapsedSeconds / plannedSeconds) * 100)) : 0;
+
+  const handleSessionAction = async (action) => {
+    setSessionError('');
+    setSessionBusy(action);
     try {
-      const results = await searchJournals(token, searchKeyword);
-      setSearchResults(results);
+      if (action === 'start') {
+        const title = sessionTitle.trim() || 'Focused work';
+        const created = await startFocusSession({
+          title,
+          planned_duration_minutes: plannedMinutes ? Number(plannedMinutes) : null,
+        });
+        setFocusSession(created);
+        setSessionAnchor(Date.now());
+        setClock(Date.now());
+        setSessionTitle('');
+        const listed = await listFocusSessions(10, 0);
+        setSessions(Array.isArray(listed.items) ? listed.items : []);
+      } else if (focusSession) {
+        const updated = await transitionFocusSession(focusSession.id, action);
+        if (action === 'complete' || action === 'abandon') {
+          setFocusSession(null);
+          setSessionAnchor(Date.now());
+          setSessions((previous) => previous.map((session) => session.id === updated.id ? updated : session));
+          const refreshed = await Promise.allSettled([listFocusSessions(10, 0), fetchFocusSessionSummary()]);
+          if (refreshed[0].status === 'fulfilled') setSessions(refreshed[0].value.items || []);
+          if (refreshed[1].status === 'fulfilled') setFocusSummary(refreshed[1].value);
+        } else {
+          setFocusSession(updated);
+          setSessionAnchor(Date.now());
+          setClock(Date.now());
+          setSessions((previous) => previous.map((session) => session.id === updated.id ? updated : session));
+        }
+      }
+    } catch (error) {
+      setSessionError(errorDetail(error, 'The focus session could not be updated. Please try again.'));
     } finally {
-      setIsSearching(false);
+      setSessionBusy('');
     }
   };
 
-  const handleClearSearch = () => {
-    setSearchKeyword('');
-    setSearchResults([]);
-  };
+  if (loading && !profile) {
+    return (
+      <div className="dashboard-page">
+        <div className="dashboard-welcome-skeleton"><div /><div /><div /></div>
+        <div className="dashboard-skeleton-grid"><div /><div /><div /><div /></div>
+        <div className="dashboard-skeleton-wide" />
+      </div>
+    );
+  }
 
   return (
-    <DashboardLayout>
-      {/* Search & Logout */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div className="flex flex-1 gap-2 sm:gap-3">
-          <input
-            className="flex-1 border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            type="text"
-            placeholder="Search entries..."
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-          />
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-            onClick={handleSearch}
-          >
-            Search
-          </button>
-          {searchResults.length > 0 && (
-            <button
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-              onClick={handleClearSearch}
-            >
-              Clear
-            </button>
-          )}
+    <div className="dashboard-page">
+      <section className="dashboard-welcome">
+        <div>
+          <span className="section-eyebrow"><span className="eyebrow-dot" /> YOUR PERSONAL SPACE</span>
+          <h1>{greeting}, {fullName}.</h1>
+          <p>Take a breath. You don't have to do it all — just the next right thing.</p>
         </div>
-        <button
-          onClick={logout}
-          className="mt-2 sm:mt-0 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition focus:ring-2 focus:ring-red-500"
-        >
-          Logout
-        </button>
-      </div>
-            <section className="mb-10">
-        {isSearching ? (
-          <p className="text-gray-500">Searching...</p>
-        ) : searchResults.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {searchResults.map((entry) => (
-              <div
-                key={entry.id}
-                className="bg-white p-5 rounded-lg shadow hover:shadow-lg transition"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 break-words">
-                    {entry.title}
-                  </h3>
-                  <span className="text-2xl">{entry.mood || '📝'}</span>
-                </div>
-                <p className="text-sm text-gray-600 mb-2">
-                  Focus: {entry.focus_percent || 0}%
-                </p>
-                <p className="text-gray-700 text-sm line-clamp-3 break-words">
-                  {entry.content}
-                </p>
-                {entry.tags?.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {entry.tags.map((tag, i) => (
-                      <span
-                        key={i}
-                        className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : searchKeyword ? (
-          <p className="text-gray-500">
-            No entries found for "{searchKeyword}".
-          </p>
-        ) : null}
+        <div className="welcome-date">
+          <CalendarCheck size={18} />
+          <span>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+        </div>
       </section>
 
-      {/* Summary */}
-      <SummaryDashboard token={token} />
+      {pageError && <div className="inline-notice" role="status">{pageError}<button type="button" onClick={refreshDashboard}><RotateCcw size={14} /> Refresh</button></div>}
 
-      {/* Search Results */}
-
-
-      {/* Header Actions */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          Dashboard
-        </h1>
-        <div className="flex gap-3">
-          <Link
-            to="/journal/create"
-            className="inline-flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold px-5 py-3 rounded-lg border border-blue-200 transition"
-          >
-            <span className="text-lg">➕</span> New Journal
-          </Link>
-          <Link
-            to="/checkins/new"
-            className="inline-flex items-center gap-2 bg-green-50 hover:bg-green-100 text-green-700 font-semibold px-5 py-3 rounded-lg border border-green-200 transition"
-          >
-            <span className="text-lg">✅</span> New Check-In
-          </Link>
-        </div>
-      </div>
-
-      {/* Stats */}
-      {stats && (
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Journal Statistics
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-blue-600 mb-2 font-medium">Total Entries</h3>
-              <p className="text-3xl font-bold">{stats.total_entries}</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-green-600 mb-2 font-medium">Avg Focus</h3>
-              <p className="text-3xl font-bold">{stats.average_focus}%</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-pink-600 mb-2 font-medium">Common Moods</h3>
-              <div className="flex flex-wrap gap-2">
-                {stats.most_common_moods?.length ? (
-                  stats.most_common_moods.map((mood, i) => (
-                    <span
-                      key={i}
-                      className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm"
-                    >
-                      {mood}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">No data</p>
-                )}
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-purple-600 mb-2 font-medium">Common Tags</h3>
-              <div className="flex flex-wrap gap-2">
-                {stats.most_used_tags?.length ? (
-                  stats.most_used_tags.map((tag, i) => (
-                    <span
-                      key={i}
-                      className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm"
-                    >
-                      #{tag}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">No tags</p>
-                )}
-              </div>
-            </div>
+      <section className="dashboard-primary-grid">
+        <article className="focus-panel">
+          <div className="focus-panel-glow" />
+          <div className="focus-panel-head">
+            <div><span className="focus-kicker"><span /> SPACE TO FOCUS</span><h2>A little progress<br />goes a long way.</h2></div>
+            <div className="focus-spark"><Sparkles size={19} /></div>
           </div>
-        </section>
-      )}
 
-      {/* Tags & Calendar */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-        <JournalTags />
-        <JournalCalendar />
-      </div>
-
-      {/* Recent Entries */}
-      <section>
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Recent Entries
-        </h2>
-        {journals.length === 0 ? (
-          <p className="text-gray-500">No journal entries yet.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {journals.slice(0, 6).map((entry) => (
-              <div
-                key={entry.id}
-                className="bg-white p-5 rounded-lg shadow hover:shadow-lg transition"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 break-words">
-                    {entry.title}
-                  </h3>
-                  <span className="text-2xl">{entry.mood || '📝'}</span>
+          {focusSession ? (
+            <div className="focus-active-session">
+              <div className="timer-ring" style={{ '--progress': timerProgress + '%' }}>
+                <div className="timer-ring-inner">
+                  <Timer size={20} />
+                  <strong>{timerLabel(elapsedSeconds)}</strong>
+                  <span>{focusSession.status === 'paused' ? 'ON PAUSE' : 'IN FOCUS'}</span>
                 </div>
-                <p className="text-sm text-gray-600 mb-2">
-                  Focus: {entry.focus_percent || 0}%
-                </p>
-                <p className="text-gray-700 text-sm line-clamp-3 break-words">
-                  {entry.content}
-                </p>
-                {entry.tags?.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {entry.tags.map((tag, i) => (
-                      <span
-                        key={i}
-                        className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+              </div>
+              <div className="active-session-meta">
+                <span className="active-session-label">CURRENT SESSION</span>
+                <h3>{focusSession.title}</h3>
+                <p>{plannedSeconds ? (Math.max(0, plannedSeconds - elapsedSeconds) > 0 ? durationLabel(plannedSeconds - elapsedSeconds) + ' left in your plan' : 'Your planned time is up — finish whenever you’re ready.') : 'Move at your own pace. No timer pressure.'}</p>
+                <div className="focus-controls">
+                  {focusSession.status === 'running' ? (
+                    <button className="focus-control-button control-pause" type="button" onClick={() => handleSessionAction('pause')} disabled={Boolean(sessionBusy)}><Pause size={16} /> Pause</button>
+                  ) : (
+                    <button className="focus-control-button control-resume" type="button" onClick={() => handleSessionAction('resume')} disabled={Boolean(sessionBusy)}><Play size={16} /> Resume</button>
+                  )}
+                  <button className="focus-control-button control-complete" type="button" onClick={() => handleSessionAction('complete')} disabled={Boolean(sessionBusy)}><Check size={16} /> Finish</button>
+                  <button className="focus-control-icon" type="button" aria-label="Abandon focus session" title="End session without completing" onClick={() => handleSessionAction('abandon')} disabled={Boolean(sessionBusy)}><X size={17} /></button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <form className="focus-start-form" onSubmit={(event) => { event.preventDefault(); handleSessionAction('start'); }}>
+              <label className="visually-hidden" htmlFor="focus-title">What would you like to focus on?</label>
+              <input id="focus-title" value={sessionTitle} maxLength={200} onChange={(event) => setSessionTitle(event.target.value)} placeholder="What would you like to focus on?" />
+              <div className="focus-start-bottom">
+                <label className="duration-select-label" htmlFor="focus-duration"><Clock3 size={15} /><span>Time to set aside</span></label>
+                <select id="focus-duration" value={plannedMinutes} onChange={(event) => setPlannedMinutes(event.target.value)}>
+                  <option value="25">25 minutes</option>
+                  <option value="45">45 minutes</option>
+                  <option value="60">1 hour</option>
+                  <option value="120">2 hours</option>
+                  <option value="">No timer</option>
+                </select>
+              </div>
+              <button className="button button-focus-start" type="submit" disabled={Boolean(sessionBusy)}><Play size={17} fill="currentColor" /> {sessionBusy === 'start' ? 'Starting session…' : 'Start focusing'} <ArrowUpRight size={17} /></button>
+            </form>
+          )}
+          {sessionError && <p className="focus-error" role="alert">{sessionError}</p>}
+          <div className="focus-panel-foot"><span><span className="focus-foot-dot" /> One thing at a time</span><span>{focusSession && focusSession.status === 'paused' ? 'Your timer is paused' : 'Your pace, your rules'}</span></div>
+        </article>
+
+        <article className={'checkin-panel' + (checkedIn ? ' checkin-complete' : '')}>
+          <div className="checkin-panel-top"><span className="section-eyebrow">DAILY CHECK-IN</span><span className="checkin-emblem">{checkedIn ? <CheckCircle2 size={21} /> : <CalendarCheck size={21} />}</span></div>
+          <div className="checkin-illustration" aria-hidden="true"><div className="sun-disc" /><div className="hill hill-back" /><div className="hill hill-front" /><div className="hill-flower flower-one" /><div className="hill-flower flower-two" /></div>
+          <h2>{checkedIn ? 'You showed up.' : 'How are you,\nreally?'}</h2>
+          <p>{checkedIn ? 'You made time to check in today. That matters.' : 'A small pause to name your mood and notice where your energy is.'}</p>
+          {checkedIn && todayCheckin ? (
+            <div className="today-mood-chip"><span>{moodEmoji(todayCheckin.mood)}</span><span>Feeling {todayCheckin.mood}</span><span className="mood-chip-focus">{todayCheckin.focus_percent ?? 0}% focus</span></div>
+          ) : null}
+          <Link className="button button-checkin" to={checkedIn ? '/checkin' : '/checkins/new'}>{checkedIn ? 'View your check-in' : 'Check in with yourself'} <ArrowRight size={17} /></Link>
+          <span className="checkin-reassurance"><Check size={13} /> No right or wrong answers</span>
+        </article>
+      </section>
+
+      <section className="dashboard-stats-grid" aria-label="Your journal at a glance">
+        <article className="stat-tile">
+          <div className="stat-tile-icon icon-green"><BookOpen size={18} /></div>
+          <div className="stat-tile-copy"><span>Journal entries</span><strong>{journalStats?.total_entries ?? journals.length}</strong><small>Words worth keeping</small></div>
+          <ArrowUpRight className="stat-tile-arrow" size={17} />
+        </article>
+        <article className="stat-tile">
+          <div className="stat-tile-icon icon-peach"><Flame size={18} /></div>
+          <div className="stat-tile-copy"><span>Current streak</span><strong>{streak?.current_streak ?? 0}<small> days</small></strong><small>Built one day at a time</small></div>
+          <ArrowUpRight className="stat-tile-arrow" size={17} />
+        </article>
+        <article className="stat-tile">
+          <div className="stat-tile-icon icon-lilac"><TrendingUp size={18} /></div>
+          <div className="stat-tile-copy"><span>Average journal focus</span><strong>{Math.round(Number(journalStats?.average_focus) || 0)}<small>%</small></strong><small>Across saved entries</small></div>
+          <ArrowUpRight className="stat-tile-arrow" size={17} />
+        </article>
+        <article className="stat-tile">
+          <div className="stat-tile-icon icon-blue"><Timer size={18} /></div>
+          <div className="stat-tile-copy"><span>Focused this week</span><strong>{durationLabel(focusSummary?.total_focus_seconds)}</strong><small>{focusSummary?.completed_sessions ?? 0} completed sessions</small></div>
+          <ArrowUpRight className="stat-tile-arrow" size={17} />
+        </article>
+      </section>
+
+      <section className="dashboard-lower-grid">
+        <article className="surface-card rhythm-card">
+          <div className="surface-card-heading">
+            <div><span className="section-eyebrow">A GENTLE RHYTHM</span><h2>Your check-in rhythm</h2><p>Consistency is about returning, not perfection.</p></div>
+            <div className="rhythm-streak"><Flame size={17} /><strong>{streak?.current_streak ?? 0}</strong><span>day streak</span></div>
+          </div>
+          <div className="week-rhythm">
+            {lastSevenDays.map((day) => (
+              <div className="rhythm-day" key={day.key}>
+                <span className="rhythm-weekday">{day.label}</span>
+                <span className={'rhythm-dot' + (day.complete ? ' is-complete' : '') + (day.today ? ' is-today' : '')}>{day.complete ? <Check size={14} /> : <span />}</span>
+                <span className={'rhythm-date' + (day.today ? ' today-date' : '')}>{day.day}</span>
               </div>
             ))}
+          </div>
+          <div className="rhythm-card-foot"><span>{checkinHistory.length} recent check-ins in your history</span><Link to="/checkin">See check-ins <ChevronRight size={15} /></Link></div>
+        </article>
+
+        <article className="surface-card quick-actions-card">
+          <div className="surface-card-heading"><div><span className="section-eyebrow">KEEP IT MOVING</span><h2>Make a little space</h2></div><span className="quick-actions-spark"><Sparkles size={18} /></span></div>
+          <Link className="quick-action-row" to="/journal/create"><span className="quick-action-icon quick-journal"><BookOpen size={18} /></span><span><strong>Write a journal entry</strong><small>Get a thought out of your head</small></span><Plus size={17} /></Link>
+          <Link className="quick-action-row" to={checkedIn ? '/checkin' : '/checkins/new'}><span className="quick-action-icon quick-checkin"><CalendarCheck size={18} /></span><span><strong>{checkedIn ? 'Revisit your check-in' : 'Take a daily check-in'}</strong><small>{checkedIn ? 'See what you recorded today' : 'Notice how today is going'}</small></span><Plus size={17} /></Link>
+          <Link className="quick-action-row" to="/journal"><span className="quick-action-icon quick-history"><BookOpen size={18} /></span><span><strong>Read past entries</strong><small>Look back with fresh eyes</small></span><Plus size={17} /></Link>
+        </article>
+      </section>
+
+      <section className="surface-card recent-entries-card">
+        <div className="surface-card-heading recent-heading">
+          <div><span className="section-eyebrow">YOUR THOUGHTS, SAVED</span><h2>Recently in your journal</h2><p>A few pages from your story so far.</p></div>
+          <Link className="text-link" to="/journal">View all entries <ArrowRight size={16} /></Link>
+        </div>
+        {recentJournals.length ? (
+          <div className="recent-entry-list">
+            {recentJournals.map((entry, index) => (
+              <Link className="recent-entry-row" to={'/journal/entry/' + entry.id} key={entry.id}>
+                <span className={'entry-index entry-index-' + (index + 1)}>{String(index + 1).padStart(2, '0')}</span>
+                <span className="entry-main"><strong>{entry.title || 'Untitled entry'}</strong><span>{(entry.content || 'A moment captured for later.').trim().replace(/\s+/g, ' ').slice(0, 110)}</span><span className="entry-tags">{(entry.tags || []).slice(0, 3).map((tag) => <i key={tag}>#{tag}</i>)}</span></span>
+                <span className="entry-date">{readableDate(entry.created_at)}</span>
+                <ChevronRight className="entry-chevron" size={18} />
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-journal-state">
+            <span className="empty-journal-icon"><BookOpen size={23} /></span>
+            <strong>Your story starts here.</strong>
+            <p>Save a thought, a moment, or a small win. You can come back to it whenever you need.</p>
+            <Link className="button button-primary button-small" to="/journal/create">Write your first entry <ArrowRight size={15} /></Link>
           </div>
         )}
       </section>
-    </DashboardLayout>
+
+      <footer className="dashboard-footer"><span>Made for real life, not perfect streaks.</span><span><span className="footer-heart">♥</span> Take it one day at a time</span></footer>
+    </div>
   );
 }

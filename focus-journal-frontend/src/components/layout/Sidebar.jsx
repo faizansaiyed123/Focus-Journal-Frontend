@@ -1,170 +1,49 @@
-// import { useState, useEffect } from 'react';
-// import { Link, useLocation } from 'react-router-dom';
-// import {
-//   FaTachometerAlt,
-//   FaBook,
-//   FaClipboardList,
-//   FaChartLine,
-//   FaRocket,
-//   FaCog,
-//   FaBrain,
-//   FaChevronLeft,
-//   FaChevronRight,
-//   FaMoon,
-//   FaSun,
-// } from 'react-icons/fa';
-// import logo from '../../assets/logo.png';
-// const navItems = [
-//   { name: 'Dashboard', path: '/dashboard', icon: <FaTachometerAlt /> },
-//   { name: 'Journal', path: '/journal', icon: <FaBook /> },
-//   { name: 'Check-ins', path: '/checkin', icon: <FaClipboardList /> },
-//   { name: 'Goals', path: '/goals', icon: <FaRocket /> },
-//   { name: 'Analytics', path: '/analytics', icon: <FaChartLine /> },
-//   // { name: 'Copilot', path: '/copilot', icon: <FaCog /> },
-//   { name: 'Insights', path: '/journal/insights', icon: <FaBrain style={{ color: '#8b5cf6' }} /> },
-// ];
-
-// export default function Sidebar() {
-//   const location = useLocation();
-//   const currentPath = location.pathname;
-//   const [collapsed, setCollapsed] = useState(false);
-//   const [darkMode, setDarkMode] = useState(false);
-
-//   // Load from localStorage
-//   useEffect(() => {
-//     const stored = localStorage.getItem('theme');
-//     setDarkMode(stored === 'dark');
-//   }, []);
-
-//   useEffect(() => {
-//     document.documentElement.classList.toggle('dark', darkMode);
-//     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
-//   }, [darkMode]);
-
-//   return (
-//     <aside className={`h-screen ${collapsed ? 'w-16' : 'w-64'} bg-white dark:bg-gray-900 transition-width duration-300 border-r shadow-lg flex flex-col`}>
-//       {/* Header */}
-//       <div className="flex items-center justify-between px-3 py-4 bg-gradient-to-r from-indigo-500 to-purple-500">
-//         {!collapsed && <h1 className="text-white font-bold text-lg">🧠 Focus Journal</h1>}
-//         <button className="text-white" onClick={() => setCollapsed(!collapsed)}>
-//           {collapsed ? <FaChevronRight /> : <FaChevronLeft />}
-//         </button>
-//       </div>
-
-//       {/* Navigation */}
-//       <nav className="flex-1 mt-4">
-//         {navItems.map((item) => (
-//           <Tooltip key={item.name} label={collapsed ? item.name : null}>
-//             <Link
-//               to={item.path}
-//               className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors ${
-//                 currentPath === item.path
-//                   ? 'bg-indigo-500 text-white'
-//                   : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
-//               }`}
-//             >
-//               <span className="text-lg">{item.icon}</span>
-//               {!collapsed && <span>{item.name}</span>}
-//             </Link>
-//           </Tooltip>
-//         ))}
-//       </nav>
-
-//       {/* Footer: Dark Mode Toggle */}
-//       <div className="p-4 flex items-center justify-center">
-//         <button
-//           onClick={() => setDarkMode(!darkMode)}
-//           className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-//         >
-//           {darkMode ? <FaSun /> : <FaMoon />}
-//         </button>
-//       </div>
-//     </aside>
-//   );
-// }
-
-// // Tooltip component (Tailwind + shadcn style)
-// function Tooltip({ label, children }) {
-//   return (
-//     <div className="relative group">
-//       {children}
-//       {label && (
-//         <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
-//           {label}
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-import { useState } from 'react';
+import { BookOpen, ChartNoAxesColumn, ClipboardCheck, Focus, Leaf, Sparkles } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  FaTachometerAlt,
-  FaBook,
-  FaClipboardList,
-  FaChartLine,
-  FaRocket,
-  FaBrain,
-  FaChevronLeft,
-  FaChevronRight,
-} from 'react-icons/fa';
 
 const navItems = [
-  { name: 'Dashboard', path: '/dashboard', icon: <FaTachometerAlt /> },
-  { name: 'Journal', path: '/journal', icon: <FaBook /> },
-  { name: 'Check-ins', path: '/checkin', icon: <FaClipboardList /> },
-  { name: 'Goals', path: '/goals', icon: <FaRocket /> },
-  { name: 'Analytics', path: '/analytics', icon: <FaChartLine /> },
-  { name: 'Insights', path: '/journal/insights', icon: <FaBrain style={{ color: '#8b5cf6' }} /> },
+  { name: 'Overview', path: '/dashboard', icon: Focus, exact: true },
+  { name: 'My journal', path: '/journal', icon: BookOpen },
+  { name: 'Daily check-ins', path: '/checkin', icon: ClipboardCheck },
+  { name: 'My patterns', path: '/analytics', icon: ChartNoAxesColumn },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen = false, onNavigate = () => {} }) {
   const location = useLocation();
-  const currentPath = location.pathname;
-  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <aside className={`h-screen ${collapsed ? 'w-16' : 'w-64'} bg-white transition-width duration-300 border-r shadow-lg flex flex-col`}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-4 bg-gradient-to-r from-indigo-500 to-purple-500">
-        {!collapsed && <h1 className="text-white font-bold text-lg">🧠 Focus Journal</h1>}
-        <button className="text-white" onClick={() => setCollapsed(!collapsed)}>
-          {collapsed ? <FaChevronRight /> : <FaChevronLeft />}
-        </button>
-      </div>
+    <aside className={'workspace-sidebar' + (mobileOpen ? ' sidebar-mobile-open' : '')}>
+      <Link className="sidebar-brand" to="/dashboard" onClick={onNavigate}>
+        <span className="sidebar-brand-icon"><Leaf size={21} strokeWidth={2.2} /></span>
+        <span className="sidebar-brand-name">focus<span>journal</span></span>
+      </Link>
 
-      {/* Navigation */}
-      <nav className="flex-1 mt-4">
-        {navItems.map((item) => (
-          <Tooltip key={item.name} label={collapsed ? item.name : null}>
-            <Link
-              to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors cursor-pointer ${
-                currentPath === item.path
-                  ? 'bg-indigo-500 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <span className="text-lg">{item.icon}</span>
-              {!collapsed && <span>{item.name}</span>}
+      <div className="sidebar-overline">YOUR WORKSPACE</div>
+      <nav className="sidebar-navigation" aria-label="Your workspace">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const selected = item.exact
+            ? location.pathname === item.path
+            : location.pathname === item.path || location.pathname.startsWith(item.path + '/') ||
+              (item.path === '/journal' && location.pathname.startsWith('/journal/entry')) ||
+              (item.path === '/checkin' && location.pathname.startsWith('/checkins'));
+          return (
+            <Link className={'sidebar-nav-item' + (selected ? ' sidebar-nav-active' : '')} to={item.path} key={item.path} onClick={onNavigate}>
+              <span className="sidebar-nav-icon"><Icon size={19} strokeWidth={selected ? 2.2 : 1.8} /></span>
+              <span>{item.name}</span>
+              {selected && <span className="sidebar-nav-indicator" />}
             </Link>
-          </Tooltip>
-        ))}
+          );
+        })}
       </nav>
-    </aside>
-  );
-}
 
-// Tooltip component (Tailwind + shadcn style)
-function Tooltip({ label, children }) {
-  return (
-    <div className="relative group">
-      {children}
-      {label && (
-        <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
-          {label}
-        </div>
-      )}
-    </div>
+      <div className="sidebar-spacer" />
+      <div className="sidebar-note">
+        <span className="sidebar-note-icon"><Sparkles size={17} /></span>
+        <strong>Small steps count.</strong>
+        <p>You don't need a perfect day to make progress.</p>
+      </div>
+      <div className="sidebar-privacy"><span className="privacy-dot" /> A space for your eyes only</div>
+    </aside>
   );
 }

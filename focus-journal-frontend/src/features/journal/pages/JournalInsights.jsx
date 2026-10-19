@@ -1,86 +1,102 @@
-import { useEffect, useState } from 'react';
-import DashboardLayout from '../../../layouts/DashboardLayout';
+import { useCallback, useEffect, useState } from 'react';
+import { ArrowRight, Brain, Check, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react';
+import apiClient from '../../../api/apiClient';
 import useAuthStore from '../../auth/authStore';
-import { ClipLoader } from 'react-spinners';
 import { generalAiInsights } from '../journalInsightsApi';
 
 export default function JournalInsights() {
   const token = useAuthStore((state) => state.token);
+  const [profile, setProfile] = useState(null);
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [savingConsent, setSavingConsent] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    const fetchInsights = async () => {
-      try {
-        const res = await generalAiInsights(token);
-        setInsights(res);
-      } catch (err) {
-        // Set a user-friendly error message
-        const errorMessage = err?.response?.data?.message || 'There is no data so there are no insights from AI..';
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await apiClient.get('/profile');
+      setProfile(response.data);
+      if (response.data.ai_processing_consent) {
+        try {
+          setInsights(await generalAiInsights());
+        } catch (insightError) {
+          const detail = insightError?.response?.data?.detail;
+          setError(typeof detail === 'string' ? detail : 'Insights are unavailable right now. Your journal is still here.');
+        }
       }
-    };
-
-    if (token) fetchInsights();
+    } catch {
+      setError('Your privacy settings could not be loaded. Refresh and try again.');
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
 
+  useEffect(() => { if (token) load(); }, [token, load]);
+
+  const updateConsent = async (enabled) => {
+    setSavingConsent(true);
+    setError('');
+    try {
+      const response = await apiClient.patch('/profile/settings', { ai_processing_consent: enabled });
+      setProfile(response.data);
+      setInsights(null);
+      if (enabled) {
+        setLoading(true);
+        try {
+          setInsights(await generalAiInsights());
+        } catch (insightError) {
+          const detail = insightError?.response?.data?.detail;
+          setError(typeof detail === 'string' ? detail : 'AI insights are not available in this deployment yet.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    } catch (settingsError) {
+      const detail = settingsError?.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : 'We could not save that privacy preference.');
+    } finally {
+      setSavingConsent(false);
+    }
+  };
+
+  if (loading && !profile) {
+    return <div className="insights-page"><div className="insights-header"><span className="section-eyebrow">REFLECT WITH CARE</span><h1>Journal insights</h1></div><div className="insights-loading" /></div>;
+  }
+
   return (
-    <DashboardLayout>
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-6">🧠 Journal Insights</h1>
+    <div className="insights-page">
+      <header className="insights-header"><span className="section-eyebrow"><span className="eyebrow-dot" /> REFLECT WITH CARE</span><h1>Journal insights</h1><p>Take a step back and notice themes in the words you’ve saved.</p></header>
 
-        {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <ClipLoader color="#3b82f6" size={50} />
-          </div>
-        ) : error ? (
-          <div className="text-center text-red-500">
-            <p>{error}</p>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {/* Focus Score */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">🎯 Focus Score</h2>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 h-4 rounded-full overflow-hidden">
-                <div
-                  className="bg-blue-600 h-4 transition-all duration-500"
-                  style={{ width: `${insights?.focus_score || 0}%` }}
-                ></div>
-              </div>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{insights?.focus_score || 0}% focused</p>
-            </div>
+      <section className="privacy-consent-card">
+        <span className="privacy-consent-icon"><ShieldCheck size={22} /></span>
+        <div className="privacy-consent-copy"><span className="section-eyebrow">YOUR PRIVACY, YOUR CALL</span><h2>{profile?.ai_processing_consent ? 'AI insights are enabled.' : 'Your reflections stay yours.'}</h2><p>AI analysis processes your journal content to create a personal summary. It is optional, and nothing is sent for this analysis until you explicitly enable it here.</p></div>
+        <div className="privacy-consent-action">
+          {profile?.ai_processing_consent ? (
+            <button className="button button-quiet consent-disable" type="button" disabled={savingConsent} onClick={() => updateConsent(false)}><LockKeyhole size={15} /> {savingConsent ? 'Saving…' : 'Turn off AI insights'}</button>
+          ) : (
+            <button className="button button-primary" type="button" disabled={savingConsent} onClick={() => updateConsent(true)}>{savingConsent ? 'Saving preference…' : 'Enable AI insights'} <ArrowRight size={16} /></button>
+          )}
+          <small>{profile?.ai_processing_consent ? 'You can withdraw consent any time.' : 'Off by default. You are in control.'}</small>
+        </div>
+      </section>
 
-            {/* Mood Summary */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">📝 Mood Summary</h2>
-              <p className="text-gray-700 dark:text-gray-300">{insights?.mood_summary || 'No mood data available.'}</p>
-            </div>
+      {error && <div className="inline-notice" role="status">{error}<button type="button" onClick={load}>Try again</button></div>}
 
-            {/* Top Keywords */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">🏷️ Top Keywords</h2>
-              {insights?.top_keywords?.filter(Boolean).length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {insights.top_keywords.map((keyword, index) => (
-                    <span
-                      key={index}
-                      className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-sm px-3 py-1 rounded-full"
-                    >
-                      {keyword}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-600 dark:text-gray-400 text-sm">No keywords found.</p>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </DashboardLayout>
+      {!profile?.ai_processing_consent ? (
+        <section className="insights-locked-panel"><span className="locked-emblem"><LockKeyhole size={24} /></span><h2>Insights are waiting, only if you want them.</h2><p>Your journal remains private and usable without AI. Enable the optional analysis above when you’re comfortable with it.</p></section>
+      ) : loading ? (
+        <div className="insights-loading" />
+      ) : insights ? (
+        <div className="insights-results">
+          <article className="insight-result-card insight-focus-result"><span className="insight-result-icon"><Brain size={20} /></span><span className="section-eyebrow">A GENTLE PICTURE</span><h2>Focus score</h2><div className="insight-score-row"><strong>{Math.round(Number(insights.focus_score) || 0)}%</strong><div className="insight-score-track"><span style={{ width: Math.max(0, Math.min(100, Number(insights.focus_score) || 0)) + '%' }} /></div></div><p>A simple summary of the focus reflected in your saved entries.</p></article>
+          <article className="insight-result-card"><span className="insight-result-icon insight-mood-icon"><Sparkles size={20} /></span><span className="section-eyebrow">LOOKING INWARD</span><h2>Mood summary</h2><p>{insights.mood_summary || 'There is not enough journal history to summarize moods just yet.'}</p></article>
+          <article className="insight-result-card"><span className="insight-result-icon insight-keyword-icon"><Check size={20} /></span><span className="section-eyebrow">WORDS THAT RECUR</span><h2>Top keywords</h2><div className="insight-keywords">{(insights.top_keywords || []).filter(Boolean).length ? insights.top_keywords.filter(Boolean).map((word) => <span key={word}>#{word}</span>) : <p>No recurring keywords found yet.</p>}</div></article>
+        </div>
+      ) : (
+        <section className="insights-locked-panel"><span className="locked-emblem"><Sparkles size={24} /></span><h2>There’s nothing to summarize just yet.</h2><p>Write a few journal entries and come back when you’re ready.</p></section>
+      )}
+    </div>
   );
 }
