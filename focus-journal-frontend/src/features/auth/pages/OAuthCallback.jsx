@@ -17,11 +17,9 @@ export default function OAuthCallback() {
     let active = true;
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
-    // Transitional compatibility for a previously deployed backend. New redirects use code only.
     const legacyToken = params.get('access_token');
     const provider = params.get('provider') || 'your account';
 
-    // Remove codes/tokens from the address bar and browser history before making requests.
     window.history.replaceState({}, document.title, window.location.pathname);
 
     if (!requestPromise.current) {

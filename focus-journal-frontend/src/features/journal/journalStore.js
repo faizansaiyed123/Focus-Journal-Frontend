@@ -6,9 +6,8 @@ const useJournalStore = create((set) => ({
   loading: false,
   error: null,
 
-  // Create a new journal entry
   createEntry: async (entryData, token) => {
-    set({ loading: true, error: null });  // Reset error state before trying again
+    set({ loading: true, error: null });  
     try {
       const newEntry = await createJournal(entryData, token);
       set((state) => ({
@@ -17,7 +16,6 @@ const useJournalStore = create((set) => ({
         error: null,
       }));
     } catch (error) {
-      // Set a user-friendly error message without logging to console
       const errorMessage = error?.response?.data?.message || "Failed to create journal entry. Please try again later.";
       set({
         loading: false,
@@ -26,7 +24,6 @@ const useJournalStore = create((set) => ({
     }
   },
 
-  // Optionally add other actions for fetching, updating, or deleting journal entries
 }));
 
 export default useJournalStore;

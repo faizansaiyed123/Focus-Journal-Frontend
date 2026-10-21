@@ -35,7 +35,6 @@ export default function Login() {
       try {
         user = await fetchCurrentUser();
       } catch {
-        // The authenticated dashboard retries the profile request if needed.
       }
       login({ user, token });
       navigate('/dashboard', { replace: true });

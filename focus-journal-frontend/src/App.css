@@ -24,7 +24,6 @@ input, textarea, select { color: var(--ink); }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid rgba(91, 133, 100, .42); outline-offset: 3px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
-/* Public home */
 .landing-page { position: relative; overflow: hidden; background: #f7f7f0; min-height: 100vh; color: #203329; }
 .landing-grain { position: absolute; inset: 0; pointer-events: none; opacity: .14; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E"); z-index: 0; }
 .landing-header, .landing-hero, .landing-principles, .landing-endcap, .landing-footer { position: relative; z-index: 1; }
@@ -137,7 +136,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .footer-private { display: flex; align-items: center; gap: 7px; }
 .footer-private > span { width: 6px; height: 6px; border-radius: 50%; background: #78a07b; }
 
-/* Sign in / sign up */
 .auth-page { background: #f4f5ed; min-height: 100vh; padding: 30px 24px; display: grid; place-items: center; position: relative; overflow: hidden; }
 .auth-page:before { content: ""; position: absolute; width: 700px; height: 700px; border-radius: 50%; background: #e7edde; top: -430px; left: -310px; }
 .auth-page:after { content: ""; position: absolute; width: 550px; height: 550px; border-radius: 50%; background: #f4e6da; bottom: -370px; right: -250px; opacity: .8; }
@@ -207,7 +205,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .oauth-loading-card p { color: #7d887e; font-size: 12px; line-height: 1.7; margin: 11px 0 20px; }
 .auth-loading-indicator { width: 25px; height: 25px; border: 3px solid #e3eade; border-top-color: #416d4a; border-radius: 50%; animation: turn 1s linear infinite; }
 
-/* App shell */
 .workspace-shell { min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0,1fr); background: var(--canvas); }
 .workspace-sidebar { height: 100vh; position: sticky; top: 0; overflow-y: auto; background: #fffefa; border-right: 1px solid #e9ece3; padding: 25px 15px 18px; display: flex; flex-direction: column; z-index: 30; }
 .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 0 9px; margin-bottom: 43px; }
@@ -244,7 +241,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .mobile-menu-button { display: none; color: #3a5741; background: transparent; padding: 5px; }
 .workspace-content { padding: 31px 36px 43px; max-width: 1600px; margin: 0 auto; }
 
-/* Dashboard */
 .dashboard-page { max-width: 1320px; margin: 0 auto; }
 .dashboard-welcome { display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; margin-bottom: 27px; }
 .dashboard-welcome .section-eyebrow { display: inline-flex; gap: 8px; align-items: center; }
@@ -396,7 +392,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .dashboard-skeleton-wide { min-height: 240px; margin-top: 18px; }
 @keyframes breathe { from { opacity: .55; } to { opacity: 1; } }
 
-/* Shared secondary pages and forms */
 .legacy-page-content { max-width: 1250px; margin: 0 auto; }
 .legacy-page-content .surface-card { box-shadow: none; }
 .tag-chip { display: inline-flex; padding: 6px 10px; border-radius: 8px; color: #57805c; background: #eef3e9; font-size: 10px; font-weight: 650; }
@@ -477,7 +472,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .legacy-page-content th { font-size: 10px; color: #68786a; }
 .legacy-page-content td, .legacy-page-content th { padding-top: 10px; padding-bottom: 10px; }
 
-/* Not-found */
 .not-found-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f5f6ef; text-align: center; }
 .not-found-page > div { max-width: 420px; }
 .not-found-page h1 { font-size: 32px; color: #2c4632; letter-spacing: -1px; }
@@ -667,7 +661,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 
 
-/* Cohesive journal and check-in pages */
 .secondary-page-header { display:flex; align-items:flex-end; justify-content:space-between; gap:22px; margin: 0 0 24px; }
 .secondary-page-header .section-eyebrow { display:inline-flex; align-items:center; gap:8px; }
 .secondary-page-header h1 { color:#283e2e; font-size:clamp(28px,2.7vw,36px); font-weight:700; letter-spacing:-1.55px; line-height:1.15; margin:9px 0 7px; }
@@ -839,7 +832,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 
 
-/* Profile settings */
 .analytics-period-chip { display:inline-flex;align-items:center;min-height:38px;padding:0 13px;border:1px solid #e5e9df;border-radius:11px;background:#fffefa;color:#718171;font-size:9px;font-weight:800;letter-spacing:1px; }
 .settings-page { max-width:850px;margin:0 auto; }
 .settings-page-heading { margin-bottom:25px; }

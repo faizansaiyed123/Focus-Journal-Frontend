@@ -49,7 +49,6 @@ export default function Register() {
       try {
         user = await fetchCurrentUser();
       } catch {
-        // The dashboard can safely retry this request.
       }
       login({ user, token });
       navigate('/dashboard', { replace: true });
