@@ -7,7 +7,7 @@ const useJournalStore = create((set) => ({
   error: null,
 
   createEntry: async (entryData, token) => {
-    set({ loading: true, error: null });  
+    set({ loading: true, error: null });
     try {
       const newEntry = await createJournal(entryData, token);
       set((state) => ({
