@@ -31,10 +31,13 @@ export default function OAuthCallback() {
         } else if (legacyToken) {
           token = legacyToken;
         } else {
-          throw new Error('The sign-in callback did not contain an exchange code.');
+          throw new Error(
+            'The sign-in callback did not contain an exchange code.',
+          );
         }
 
-        if (!token) throw new Error('The server did not return an access token.');
+        if (!token)
+          throw new Error('The server did not return an access token.');
         const response = await apiClient.get('/auth/me', {
           headers: { Authorization: 'Bearer ' + token },
         });
@@ -52,20 +55,41 @@ export default function OAuthCallback() {
       .catch(() => {
         if (!active) return;
         logout();
-        setError('We could not verify this ' + provider + ' sign-in. Please try again.');
+        setError(
+          'We could not verify this ' +
+            provider +
+            ' sign-in. Please try again.',
+        );
       });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [login, logout, navigate]);
 
   return (
     <main className="oauth-loading-page">
       <div className="oauth-loading-card">
-        <span className="brand-mark"><Leaf size={21} /></span>
+        <span className="brand-mark">
+          <Leaf size={21} />
+        </span>
         <h1>{error ? 'Let’s try that again.' : 'Welcome back.'}</h1>
         <p>{error || message}</p>
-        {!error && <span className="auth-loading-indicator" aria-label="Loading" />}
-        {error && <button className="button button-primary" type="button" onClick={() => navigate('/login', { replace: true })}>Back to sign in</button>}
+        {!error && (
+          <span
+            className="auth-loading-indicator"
+            aria-label="Loading"
+          />
+        )}
+        {error && (
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => navigate('/login', { replace: true })}
+          >
+            Back to sign in
+          </button>
+        )}
       </div>
     </main>
   );

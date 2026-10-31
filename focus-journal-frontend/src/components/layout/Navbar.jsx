@@ -9,8 +9,21 @@ export default function Navbar() {
 
   return (
     <header className="workspace-topbar">
-      <div className="topbar-page-context"><span>YOUR SPACE</span><strong>Welcome, {user?.full_name || user?.name || 'friend'}</strong></div>
-      <button className="topbar-logout" type="button" onClick={() => { logout(); navigate('/login', { replace: true }); }}><LogOut size={16} /><span>Log out</span></button>
+      <div className="topbar-page-context">
+        <span>YOUR SPACE</span>
+        <strong>Welcome, {user?.full_name || user?.name || 'friend'}</strong>
+      </div>
+      <button
+        className="topbar-logout"
+        type="button"
+        onClick={() => {
+          logout();
+          navigate('/login', { replace: true });
+        }}
+      >
+        <LogOut size={16} />
+        <span>Log out</span>
+      </button>
     </header>
   );
 }

@@ -5,9 +5,19 @@ import { fetchCheckinsBetweenDates } from '../checkinAPI';
 import useAuthStore from '../../auth/authStore';
 
 function displayDate(value) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').slice(0, 10));
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+    String(value || '').slice(0, 10),
+  );
   if (!match) return 'Date unavailable';
-  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+  return new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+  ).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 export default function CheckinBetweenDates() {
@@ -36,26 +46,110 @@ export default function CheckinBetweenDates() {
           setSearched(true);
         }
       } catch {
-        if (!cancelled) setError('Those check-ins could not be retrieved. Please try again.');
+        if (!cancelled)
+          setError('Those check-ins could not be retrieved. Please try again.');
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
     loadData();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token, startDate, endDate]);
 
   return (
     <section className="date-filter-panel surface-card">
-      <div className="date-filter-heading"><span className="date-filter-icon"><CalendarRange size={19} /></span><div><h2>Revisit a time period</h2><p>Choose dates to look back at saved check-ins.</p></div></div>
-      <div className="date-filter-fields">
-        <div className="form-field-group"><label htmlFor="startDate">FROM</label><input id="startDate" className="text-field" type="date" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} /></div>
-        <div className="date-range-divider" aria-hidden="true">—</div>
-        <div className="form-field-group"><label htmlFor="endDate">TO</label><input id="endDate" className="text-field" type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} /></div>
-        <div className="date-filter-message">{loading ? <><LoaderCircle size={15} className="spin-icon" /> Finding your entries…</> : searched ? <><Search size={15} /> {checkins.length} {checkins.length === 1 ? 'entry' : 'entries'} found</> : <span>Select a start and end date.</span>}</div>
+      <div className="date-filter-heading">
+        <span className="date-filter-icon">
+          <CalendarRange size={19} />
+        </span>
+        <div>
+          <h2>Revisit a time period</h2>
+          <p>Choose dates to look back at saved check-ins.</p>
+        </div>
       </div>
-      {error && <p className="form-error" role="alert">{error}</p>}
-      {searched && !loading && !error && <div className="date-filter-results">{checkins.length ? checkins.map((item) => <Link className="date-filter-result" to={'/checkins/' + item.id} key={item.id}><span><strong>{displayDate(item.date || item.checkin_date)}</strong><small>{item.note?.trim() || 'No note saved'}</small></span><span className="date-result-mood">{item.mood || 'Reflection'} · {item.focus_percent ?? 0}%</span></Link>) : <p className="date-filter-empty">No check-ins were saved in this date range.</p>}</div>}
+      <div className="date-filter-fields">
+        <div className="form-field-group">
+          <label htmlFor="startDate">FROM</label>
+          <input
+            id="startDate"
+            className="text-field"
+            type="date"
+            value={startDate}
+            max={endDate || undefined}
+            onChange={(event) => setStartDate(event.target.value)}
+          />
+        </div>
+        <div
+          className="date-range-divider"
+          aria-hidden="true"
+        >
+          —
+        </div>
+        <div className="form-field-group">
+          <label htmlFor="endDate">TO</label>
+          <input
+            id="endDate"
+            className="text-field"
+            type="date"
+            value={endDate}
+            min={startDate || undefined}
+            onChange={(event) => setEndDate(event.target.value)}
+          />
+        </div>
+        <div className="date-filter-message">
+          {loading ? (
+            <>
+              <LoaderCircle
+                size={15}
+                className="spin-icon"
+              />{' '}
+              Finding your entries…
+            </>
+          ) : searched ? (
+            <>
+              <Search size={15} /> {checkins.length}{' '}
+              {checkins.length === 1 ? 'entry' : 'entries'} found
+            </>
+          ) : (
+            <span>Select a start and end date.</span>
+          )}
+        </div>
+      </div>
+      {error && (
+        <p
+          className="form-error"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+      {searched && !loading && !error && (
+        <div className="date-filter-results">
+          {checkins.length ? (
+            checkins.map((item) => (
+              <Link
+                className="date-filter-result"
+                to={'/checkins/' + item.id}
+                key={item.id}
+              >
+                <span>
+                  <strong>{displayDate(item.date || item.checkin_date)}</strong>
+                  <small>{item.note?.trim() || 'No note saved'}</small>
+                </span>
+                <span className="date-result-mood">
+                  {item.mood || 'Reflection'} · {item.focus_percent ?? 0}%
+                </span>
+              </Link>
+            ))
+          ) : (
+            <p className="date-filter-empty">
+              No check-ins were saved in this date range.
+            </p>
+          )}
+        </div>
+      )}
     </section>
   );
 }

@@ -16,14 +16,15 @@ const useJournalStore = create((set) => ({
         error: null,
       }));
     } catch (error) {
-      const errorMessage = error?.response?.data?.message || "Failed to create journal entry. Please try again later.";
+      const errorMessage =
+        error?.response?.data?.message ||
+        'Failed to create journal entry. Please try again later.';
       set({
         loading: false,
         error: errorMessage,
       });
     }
   },
-
 }));
 
 export default useJournalStore;

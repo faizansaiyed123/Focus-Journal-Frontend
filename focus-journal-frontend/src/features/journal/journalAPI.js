@@ -34,7 +34,9 @@ export const getStats = async () => {
 
 export const fetchJournalStats = async () => {
   const response = await apiClient.get(BASE_URL + '/stats');
-  return response.data && response.data.data ? response.data.data : response.data;
+  return response.data && response.data.data
+    ? response.data.data
+    : response.data;
 };
 
 export const getSentiment = async () => {
@@ -50,5 +52,7 @@ export const fetchSentimentAnalysis = async () => {
 
 export const fetchWeeklySummary = async () => {
   const response = await apiClient.get(BASE_URL + '/summary/weekly');
-  return response.data && response.data.data ? response.data.data : response.data;
+  return response.data && response.data.data
+    ? response.data.data
+    : response.data;
 };
