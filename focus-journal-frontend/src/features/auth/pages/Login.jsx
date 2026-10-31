@@ -44,7 +44,9 @@ export default function Login() {
       let user = null;
       try {
         user = await fetchCurrentUser();
-      } catch {}
+      } catch {
+        // Profile details are optional after a successful sign-in.
+      }
       login({ user, token });
       navigate('/dashboard', { replace: true });
     } catch (requestError) {
