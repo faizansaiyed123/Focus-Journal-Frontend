@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -31,25 +31,13 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: focus-journal-frontend/package-lock.json
-      - name: Resolve patched dependencies and refresh lockfile
-        run: npm install --no-audit --no-fund
-      - name: Install dependencies from the lockfile
-        run: npm ci --no-audit
+      - name: Install dependencies
+        run: npm ci
+      - name: Check code formatting
+        run: npm run format:check
       - name: Audit dependency tree
         run: npm audit --audit-level=low
       - name: Lint source files
         run: npm run lint -- --max-warnings=0
       - name: Build production bundle
         run: npm run build
-      - name: Commit refreshed dependency lockfile
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add focus-journal-frontend/package-lock.json
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: update audited frontend dependency lockfile"
-            git push origin HEAD:format/readable-prettier-80col
-          else
-            echo "Lockfile is already current."
-          fi
-        working-directory: .
