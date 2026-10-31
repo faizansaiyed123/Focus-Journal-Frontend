@@ -14,7 +14,9 @@ export const fetchToday = async () => {
 
 export const fetchCheckinStats = async () => {
   const response = await apiClient.get(BASE_URL + '/stats');
-  return response.data && response.data.data ? response.data.data : response.data;
+  return response.data && response.data.data
+    ? response.data.data
+    : response.data;
 };
 
 export const createCheckin = async (entry) => {
@@ -43,13 +45,18 @@ export const deleteCheckin = async (id) => {
 };
 
 export const fetchCheckinHistory = async (range = 7) => {
-  const response = await apiClient.get(BASE_URL + '/history', { params: { range } });
+  const response = await apiClient.get(BASE_URL + '/history', {
+    params: { range },
+  });
   return response.data && response.data.data ? response.data.data : [];
 };
 
 export const fetchCheckinsBetweenDates = async (_token, startDate, endDate) => {
   const response = await apiClient.get(BASE_URL + '/checkins', {
-    params: { start_date: startDate || undefined, end_date: endDate || undefined },
+    params: {
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
+    },
   });
   return response.data && response.data.data ? response.data.data : [];
 };

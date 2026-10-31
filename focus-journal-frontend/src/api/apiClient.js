@@ -16,7 +16,9 @@ function getStoredToken() {
   if (directToken) return directToken;
 
   try {
-    const persisted = JSON.parse(window.localStorage.getItem('auth-storage') || 'null');
+    const persisted = JSON.parse(
+      window.localStorage.getItem('auth-storage') || 'null',
+    );
     return persisted && persisted.state ? persisted.state.token : null;
   } catch {
     return null;
@@ -29,7 +31,11 @@ function isPublicAuthRequest(url = '') {
 
 apiClient.interceptors.request.use((config) => {
   const token = getStoredToken();
-  if (token && !config.headers.Authorization && !isPublicAuthRequest(config.url || '')) {
+  if (
+    token &&
+    !config.headers.Authorization &&
+    !isPublicAuthRequest(config.url || '')
+  ) {
     config.headers.Authorization = 'Bearer ' + token;
   }
   return config;
@@ -45,14 +51,16 @@ apiClient.interceptors.response.use(
       status === 401 &&
       !isPublicAuthRequest(url) &&
       typeof window !== 'undefined' &&
-      !['/login', '/register', '/auth/callback'].includes(window.location.pathname)
+      !['/login', '/register', '/auth/callback'].includes(
+        window.location.pathname,
+      )
     ) {
       window.localStorage.removeItem('token');
       window.localStorage.removeItem('auth-storage');
       window.location.assign('/login');
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default apiClient;
