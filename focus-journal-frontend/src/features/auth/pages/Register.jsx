@@ -62,7 +62,9 @@ export default function Register() {
       let user = null;
       try {
         user = await fetchCurrentUser();
-      } catch {}
+      } catch {
+        // Profile details are optional after a successful registration.
+      }
       login({ user, token });
       navigate('/dashboard', { replace: true });
     } catch (requestError) {
